@@ -10,7 +10,7 @@ require "GameLib"
 -- ActionControls Module Definition
 -----------------------------------------------------------------------------------------------
 local ActionControls = {
-	_VERSION = 'ActionControls.lua 0.0.13',
+	_VERSION = 'ActionControls.lua 0.0.14',
 	_URL     = '',
 	_DESCRIPTION = 'Action control system for Wildstar'} 
 
@@ -439,6 +439,10 @@ end
 -----------------------------------------------------------------------------------------------
 function ActionControls:OnSystemKeyDown(key)
 	--log.Debug("OnSystemKeyDown(" .. key .. ")")
+	if self.wndMain ~= nil and self.wndMain:IsVisible() then
+		self:SetMouseLock(false)
+		return
+	end
 
 	-- target locking
 	if key == KeyUtils:CharToSysKeyCode(self.settings.mouseOverTargetLockKey) then
