@@ -30,13 +30,13 @@
             <Event Name="ButtonSignal" Function="OnUnBindMouseButtonsSignal"/>
         </Control>
         <Event Name="WindowShow" Function="OnGameDialogInteraction"/>
-        <Control Class="Button" Base="CRB_Basekit:kitBtn_List_Holo" Font="DefaultButton" ButtonType="PushButton" RadioGroup="KeyBindings" LAnchorPoint="0" LAnchorOffset="213" TAnchorPoint="0" TAnchorOffset="196" RAnchorPoint="0" RAnchorOffset="308" BAnchorPoint="0" BAnchorOffset="226" DT_VCENTER="1" DT_CENTER="1" BGColor="UI_BtnBGDefault" TextColor="UI_BtnTextDefault" NormalTextColor="UI_BtnTextDefault" PressedTextColor="UI_BtnTextDefault" FlybyTextColor="UI_BtnTextDefault" PressedFlybyTextColor="UI_BtnTextDefault" DisabledTextColor="UI_BtnTextDefault" TooltipType="OnCursor" Name="TbCameraLockKey" TooltipColor="" GlobalRadioGroup="" Text="" ProcessRightClick="1">
+        <Control Class="Button" Base="CRB_Basekit:kitBtn_List_Holo" Font="DefaultButton" ButtonType="PushButton" RadioGroup="KeyBindings" LAnchorPoint="0" LAnchorOffset="213" TAnchorPoint="0" TAnchorOffset="196" RAnchorPoint="0" RAnchorOffset="308" BAnchorPoint="0" BAnchorOffset="226" DT_VCENTER="1" DT_CENTER="1" BGColor="UI_BtnBGDefault" TextColor="UI_BtnTextDefault" NormalTextColor="UI_BtnTextDefault" PressedTextColor="UI_BtnTextDefault" FlybyTextColor="UI_BtnTextDefault" PressedFlybyTextColor="UI_BtnTextDefault" DisabledTextColor="UI_BtnTextDefault" TooltipType="OnCursor" Name="BtnCameraLockKey" TooltipColor="" GlobalRadioGroup="" Text="" ProcessRightClick="1">
             <Event Name="ButtonSignal" Function="OnBindButtonSignal"/>
-            <Event Name="WindowKeyDown" Function="OnBindWindowKeyDown"/>
+            <Event Name="WindowKeyDown" Function="OnBtnCameraLockKey_WindowKeyDown"/>
         </Control>
-        <Control Class="Button" Base="CRB_Basekit:kitBtn_List_Holo" Font="DefaultButton" ButtonType="PushButton" RadioGroup="KeyBindings" LAnchorPoint="0" LAnchorOffset="213" TAnchorPoint="0" TAnchorOffset="228" RAnchorPoint="0" RAnchorOffset="308" BAnchorPoint="0" BAnchorOffset="258" DT_VCENTER="1" DT_CENTER="1" BGColor="UI_BtnBGDefault" TextColor="UI_BtnTextDefault" NormalTextColor="UI_BtnTextDefault" PressedTextColor="UI_BtnTextDefault" FlybyTextColor="UI_BtnTextDefault" PressedFlybyTextColor="UI_BtnTextDefault" DisabledTextColor="UI_BtnTextDefault" TooltipType="OnCursor" Name="TbTargetLockKey" TooltipColor="" GlobalRadioGroup="" Text="" ProcessRightClick="1">
+        <Control Class="Button" Base="CRB_Basekit:kitBtn_List_Holo" Font="DefaultButton" ButtonType="PushButton" RadioGroup="KeyBindings" LAnchorPoint="0" LAnchorOffset="213" TAnchorPoint="0" TAnchorOffset="228" RAnchorPoint="0" RAnchorOffset="308" BAnchorPoint="0" BAnchorOffset="258" DT_VCENTER="1" DT_CENTER="1" BGColor="UI_BtnBGDefault" TextColor="UI_BtnTextDefault" NormalTextColor="UI_BtnTextDefault" PressedTextColor="UI_BtnTextDefault" FlybyTextColor="UI_BtnTextDefault" PressedFlybyTextColor="UI_BtnTextDefault" DisabledTextColor="UI_BtnTextDefault" TooltipType="OnCursor" Name="BtnTargetLockKey" TooltipColor="" GlobalRadioGroup="" Text="" ProcessRightClick="1">
             <Event Name="ButtonSignal" Function="OnBindButtonSignal"/>
-            <Event Name="WindowKeyDown" Function="OnBindWindowKeyDown"/>
+            <Event Name="WindowKeyDown" Function="BtnTargetLockKey_WindowKeyDown"/>
         </Control>
     </Form>
 </Forms>

@@ -81,7 +81,8 @@ function ActionControls:new(o)
 	o.settings = {
 		--logLevel = 4,
 		mouseLockingType = EnumMouseLockingType.MovementKeys,
-		mouseOverTargetLockKey = "Caps Lock"
+		mouseLockKey = "`",
+		mouseOverTargetLockKey = "Caps Lock"		
 	}
 	
     return o
@@ -629,25 +630,24 @@ end
 function ActionControls:OnShowOptionWindow()
 	self:SetMouseLock(false)
 	
-	self:OptionWindowPopulateFrom()
+	self:ReadKeyBindings()
+	self.userSettings = table.ShallowCopy(self.settings)
+	
+	self:OptionWindowPopulateForm()
 	
 	self.wndMain:Invoke() -- show the window
 	GameLib.PauseGameActionInput(true)
 end
 
-function ActionControls:OptionWindowPopulateFrom()
-	self:ReadKeyBindings()
-	
+function ActionControls:OptionWindowPopulateForm()
 	self.isMouseBoundToActionsOption = self.isMouseBoundToActions
 	
-	self.userSettings = table.ShallowCopy(self.settings)
-
 	self.wndMain:FindChild("RbKeyLocking"):SetCheck(self.userSettings.mouseLockingType == EnumMouseLockingType.MovementKeys)
 	self.wndMain:FindChild("RbPositionLocking"):SetCheck(self.userSettings.mouseLockingType == EnumMouseLockingType.PhisicalMovement)
 	self.wndMain:FindChild("RbDisabledLocking"):SetCheck(self.userSettings.mouseLockingType == EnumMouseLockingType.None)
 
-	self.wndMain:FindChild("TbCameraLockKey"):SetText(tostring(self.boundKeys.mouseLockToggleKeys[1][1]))		
-	self.wndMain:FindChild("TbTargetLockKey"):SetText(tostring(self.userSettings.mouseOverTargetLockKey))
+	self.wndMain:FindChild("BtnCameraLockKey"):SetText(tostring(self.userSettings.mouseLockKey))		
+	self.wndMain:FindChild("BtnTargetLockKey"):SetText(tostring(self.userSettings.mouseOverTargetLockKey))
 	
 	self:SetMouseBindButtonsState()
 end
@@ -686,27 +686,29 @@ function ActionControls:OnUnBindMouseButtonsSignal( wndHandler, wndControl, eMou
 end
 
 function ActionControls:OnBindButtonSignal( wndHandler, wndControl, eMouseButton )
-	log.Info("OnTbCameraLockKeyMouseButtonDown")
 	self:OptionsBeginBinding(wndControl)
 end
 
-function ActionControls:OnBindWindowKeyDown( wndHandler, wndControl, strKeyName, nScanCode, nMetakeys )
-	log.Info("OnTbCameraLockKeyWindowKeyDown")
-	
+function ActionControls:OnBtnCameraLockKey_WindowKeyDown(wndHandler, wndControl, strKeyName, nScanCode, nMetakeys)
 	local key = self:OptionsProcessKey(wndHandler, strKeyName, nScanCode)
-	log.Info("key: " .. tostring(key))
+	
+	log.Info("Camera lock key: " .. tostring(key))
+	
+	self.userSettings.mouseLockKey = key
 
 	self:OptionsEndBinding(wndControl)
 end
 
-function ActionControls:OptionsBeginBinding(wndControl)
-	wndControl:SetCheck(true)
-	wndControl:SetFocus()
+function ActionControls:BtnTargetLockKey_WindowKeyDown( wndHandler, wndControl, strKeyName, nScanCode, nMetakeys )
+	local key = self:OptionsProcessKey(wndHandler, strKeyName, nScanCode)
+	log.Info("Target lock key: " .. tostring(key))
+
+	self.userSettings.mouseOverTargetLockKey = key
+	
+	self:OptionsEndBinding(wndControl)
 end
 
 function ActionControls:OptionsProcessKey(wndControl, strKeyName, nScanCode)
-	log.Info(strKeyName)
-	
 	if strKeyName == "Esc" then
 		return nil
 	end
@@ -714,9 +716,15 @@ function ActionControls:OptionsProcessKey(wndControl, strKeyName, nScanCode)
 	return KeyUtils:KeybindNCodeToChar(nScanCode)
 end
 
+function ActionControls:OptionsBeginBinding(wndControl)
+	wndControl:SetCheck(true)
+	wndControl:SetFocus()
+end
+
 function ActionControls:OptionsEndBinding(wndControl)
 	wndControl:SetCheck(false)
 	wndControl:ClearFocus()
+	self:OptionWindowPopulateForm()
 end
 
 -- when the OK button is clicked
