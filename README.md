@@ -1,6 +1,6 @@
 ActionControls
 ==============
 
-Wildstar ActiveControls addon
+Wildstar ActionControls addon
 
 http://wildstar.curseforge.com/ws-addons/220537-actioncontrols
