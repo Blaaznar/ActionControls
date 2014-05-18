@@ -480,9 +480,12 @@ function ActionControls:OnSystemKeyDown(key)
 end
 
 function ActionControls:OnGameClickWorld(tPos)
-	if not self.isMouseBoundToActions and GameLib.IsMouseLockOn() then
+	if GameLib.IsMouseLockOn() then
 		GameLib.SetTargetUnit(self.lastTargetUnit)
-		self:SetMouseLock(false)
+		
+		if not self.isMouseBoundToActions then
+			self:SetMouseLock(false)
+		end
 	end
 end
 
