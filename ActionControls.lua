@@ -10,7 +10,7 @@ require "GameLib"
 -- ActionControls Module Definition
 -----------------------------------------------------------------------------------------------
 local ActionControls = {
-	_VERSION = 'ActionControls.lua 0.0.12',
+	_VERSION = 'ActionControls.lua 0.0.13',
 	_URL     = '',
 	_DESCRIPTION = 'Action control system for Wildstar'} 
 
