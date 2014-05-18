@@ -10,7 +10,7 @@ require "GameLib"
 -- ActionControls Module Definition
 -----------------------------------------------------------------------------------------------
 local ActionControls = {
-	_VERSION = 'ActionControls.lua 0.0.11',
+	_VERSION = 'ActionControls.lua 0.0.12',
 	_URL     = '',
 	_DESCRIPTION = 'Action control system for Wildstar'} 
 
@@ -31,7 +31,7 @@ local EnumMouseLockingType =
 -- Logging
 -- TODO: Move to a class or use 3rd party logging lib
 -----------------------------------------------------------------------------------------------
-local logLevel = 4	
+local logLevel = 3	
 local log = {}
 log.Debug = function (message) 
 	if logLevel > 3 then
@@ -183,6 +183,8 @@ function ActionControls:OnDocLoaded()
 		Apollo.RegisterEventHandler("ToggleTradeskills", "OnGameDialogInteraction", self)
 		Apollo.RegisterEventHandler("ToggleZoneMap", "OnGameDialogInteraction", self)
 		Apollo.RegisterEventHandler("TradeskillEngravingStationOpen", "OnGameDialogInteraction", self)
+		
+		Apollo.RegisterEventHandler("DuelStateChanged",	"OnGameDialogInteraction", self)
 		
 		-- Lock triggers
 		Apollo.RegisterEventHandler("SystemKeyDown", "OnSystemKeyDown", self) 
@@ -625,8 +627,9 @@ function ActionControls:OptionWindowPopulateFrom()
 	
 	self.userSettings = table.ShallowCopy(self.settings)
 
-	self.wndMain:FindChild("KeyLockingChkButton"):SetCheck(self.userSettings.mouseLockingType == EnumMouseLockingType.MovementKeys)
-	self.wndMain:FindChild("PositionLockingChkButton"):SetCheck(self.userSettings.mouseLockingType == EnumMouseLockingType.PhisicalMovement)
+	self.wndMain:FindChild("RbKeyLocking"):SetCheck(self.userSettings.mouseLockingType == EnumMouseLockingType.MovementKeys)
+	self.wndMain:FindChild("RbPositionLocking"):SetCheck(self.userSettings.mouseLockingType == EnumMouseLockingType.PhisicalMovement)
+	self.wndMain:FindChild("RbDisabledLocking"):SetCheck(self.userSettings.mouseLockingType == EnumMouseLockingType.None)
 
 	self.wndMain:FindChild("TbCameraLockKey"):SetText(tostring(self.boundKeys.mouseLockToggleKeys[1][1]))		
 	self.wndMain:FindChild("TbTargetLockKey"):SetText(tostring(self.userSettings.mouseOverTargetLockKey))
@@ -671,14 +674,19 @@ function ActionControls:OnCancel()
 end
 
 
-function ActionControls:OnKeyLockingChkButtonCheck( wndHandler, wndControl, eMouseButton )
+function ActionControls:OnRbKeyLockingCheck( wndHandler, wndControl, eMouseButton )
 	log.Debug("OnKeyLockingChkButtonCheck")
 	self.userSettings.mouseLockingType = EnumMouseLockingType.MovementKeys
 end
 
-function ActionControls:OnPositionLockingChkButtonCheck( wndHandler, wndControl, eMouseButton )
+function ActionControls:OnRbPositionLockingCheck( wndHandler, wndControl, eMouseButton )
 	log.Debug("OnPositionLockingChkButtonCheck")
 	self.userSettings.mouseLockingType = EnumMouseLockingType.PhisicalMovement
+end
+
+function ActionControls:OnRbDisabledLockingCheck( wndHandler, wndControl, eMouseButton )
+	log.Debug("OnRbPositionLockingCheck")
+	self.userSettings.mouseLockingType = EnumMouseLockingType.None
 end
 
 function ActionControls:OnBindMouseButtonsSignal( wndHandler, wndControl, eMouseButton )
