@@ -676,7 +676,11 @@ function ActionControls:OnBtnCameraLockKey_WindowKeyDown(wndHandler, wndControl,
 	local key = self:OptionsProcessKey(wndHandler, strKeyName, nScanCode)
 	log.Debug("Camera lock key: " .. tostring(key))
 	
-	self.userSettings.mouseLockKey = key
+	if (not self:IsKeyAlreadyBound(key)) then
+		self.userSettings.mouseLockKey = key
+	else
+		log.Info("Key '" .. tostring(key) .. "' is already bound.")
+	end		
 
 	self:OptionsEndBinding(wndControl)
 end
@@ -685,9 +689,35 @@ function ActionControls:BtnTargetLockKey_WindowKeyDown( wndHandler, wndControl, 
 	local key = self:OptionsProcessKey(wndHandler, strKeyName, nScanCode)
 	log.Debug("Target lock key: " .. tostring(key))
 
-	self.userSettings.mouseOverTargetLockKey = key
+	if (not self:IsKeyAlreadyBound(key)) then
+		self.userSettings.mouseOverTargetLockKey = key
+	else
+		log.Info("Key '" .. tostring(key) .. "' is already bound.")
+	end
 	
 	self:OptionsEndBinding(wndControl)
+end
+
+function ActionControls:IsKeyAlreadyBound(key)
+	if key == nil then return false end
+	
+	if self.userSettings.mouseOverTargetLockKey == key
+		or self.userSettings.mouseLockKey == key
+	then
+		return true
+	end
+	
+	local bindings = GameLib.GetKeyBindings();
+	
+	if table.ExistsItem(bindings, 
+		function (binding)
+			return table.ExistsItem(binding.arInputs, 
+				function (arInput) 
+					return (arInput.eDevice == 1 and KeyUtils:KeybindNCodeToChar(arInput.nCode) == key)
+				end) 
+		end) then
+		return true
+	end
 end
 
 function ActionControls:OptionsProcessKey(wndControl, strKeyName, nScanCode)
