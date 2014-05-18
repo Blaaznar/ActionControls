@@ -131,7 +131,6 @@ function ActionControls:OnDocLoaded()
 		-- self.xmlDoc = nil
 		
 		-- Register handlers for events, slash commands and timer, etc.
-		-- e.g. Apollo.RegisterEventHandler("KeyDown", "OnKeyDown", self)
 		Apollo.RegisterSlashCommand("ac", "OnActionControlsOn", self)
 		Apollo.RegisterSlashCommand("AC", "OnActionControlsOn", self)
 		Apollo.RegisterSlashCommand("ActionControls", "OnActionControlsOn", self)
@@ -213,7 +212,7 @@ function ActionControls:OnDocLoaded()
 		-- Keybinding events
 		Apollo.RegisterEventHandler("KeyBindingKeyChanged", "OnKeyBindingKeyChanged", self)
 		Apollo.RegisterEventHandler("KeyBindingUpdated", "OnKeyBindingUpdated", self)
-
+		
 		-- Additional Addon initialization
 		self:ReadKeyBindings()
 		
@@ -362,8 +361,6 @@ function ActionControls:BindMouseButtons()
 		return
 	end
 
-	GameLib.PauseGameActionInput(true)
-	
 	local lmbBinding = self:GetBindingByActionName(bindings, "LimitedActionSet1")
 	lmbBinding.arInputs[2].eDevice = 2
 	lmbBinding.arInputs[2].nCode = 0
@@ -373,7 +370,6 @@ function ActionControls:BindMouseButtons()
 	rmbBinding.arInputs[2].nCode = 1
 
 	GameLib.SetKeyBindings(bindings)
-	GameLib.PauseGameActionInput(false)
 	
 	self.isMouseBoundToActions = true
 	
@@ -386,8 +382,6 @@ function ActionControls:UnbindMouseButtons()
 		return
 	end
 	
-	GameLib.PauseGameActionInput(true)
-	
 	local bindings = GameLib.GetKeyBindings();
 	
 	local lmbBinding = self:GetBindingByActionName(bindings, "LimitedActionSet1")
@@ -399,7 +393,6 @@ function ActionControls:UnbindMouseButtons()
 	rmbBinding.arInputs[2].nCode = 0
 
 	GameLib.SetKeyBindings(bindings)
-	GameLib.PauseGameActionInput(false)
 	
 	self.isMouseBoundToActions = false	
 	
@@ -639,6 +632,7 @@ function ActionControls:OnShowOptionWindow()
 	self:OptionWindowPopulateFrom()
 	
 	self.wndMain:Invoke() -- show the window
+	GameLib.PauseGameActionInput(true)
 end
 
 function ActionControls:OptionWindowPopulateFrom()
@@ -663,6 +657,68 @@ function ActionControls:SetMouseBindButtonsState()
 	self.wndMain:FindChild("UnBindMouseButtons"):Enable(self.isMouseBoundToActionsOption)
 end
 
+function ActionControls:OnRbKeyLockingCheck( wndHandler, wndControl, eMouseButton )
+	log.Debug("OnKeyLockingChkButtonCheck")
+	self.userSettings.mouseLockingType = EnumMouseLockingType.MovementKeys
+end
+
+function ActionControls:OnRbPositionLockingCheck( wndHandler, wndControl, eMouseButton )
+	log.Debug("OnPositionLockingChkButtonCheck")
+	self.userSettings.mouseLockingType = EnumMouseLockingType.PhisicalMovement
+end
+
+function ActionControls:OnRbDisabledLockingCheck( wndHandler, wndControl, eMouseButton )
+	log.Debug("OnRbPositionLockingCheck")
+	self.userSettings.mouseLockingType = EnumMouseLockingType.None
+end
+
+-- Binding keys
+function ActionControls:OnBindMouseButtonsSignal( wndHandler, wndControl, eMouseButton )
+	log.Debug("OnBindMouseButtonsSignal")
+	
+	self.isMouseBoundToActionsOption = true
+	self:SetMouseBindButtonsState()
+end
+
+function ActionControls:OnUnBindMouseButtonsSignal( wndHandler, wndControl, eMouseButton )
+	self.isMouseBoundToActionsOption = false
+	self:SetMouseBindButtonsState()
+end
+
+function ActionControls:OnBindButtonSignal( wndHandler, wndControl, eMouseButton )
+	log.Info("OnTbCameraLockKeyMouseButtonDown")
+	self:OptionsBeginBinding(wndControl)
+end
+
+function ActionControls:OnBindWindowKeyDown( wndHandler, wndControl, strKeyName, nScanCode, nMetakeys )
+	log.Info("OnTbCameraLockKeyWindowKeyDown")
+	
+	local key = self:OptionsProcessKey(wndHandler, strKeyName, nScanCode)
+	log.Info("key: " .. tostring(key))
+
+	self:OptionsEndBinding(wndControl)
+end
+
+function ActionControls:OptionsBeginBinding(wndControl)
+	wndControl:SetCheck(true)
+	wndControl:SetFocus()
+end
+
+function ActionControls:OptionsProcessKey(wndControl, strKeyName, nScanCode)
+	log.Info(strKeyName)
+	
+	if strKeyName == "Esc" then
+		return nil
+	end
+	
+	return KeyUtils:KeybindNCodeToChar(nScanCode)
+end
+
+function ActionControls:OptionsEndBinding(wndControl)
+	wndControl:SetCheck(false)
+	wndControl:ClearFocus()
+end
+
 -- when the OK button is clicked
 function ActionControls:OnOK()
 	if self.isMouseBoundToActionsOption ~= self.isMouseBoundToActions then
@@ -681,59 +737,22 @@ function ActionControls:OnOK()
 	-- use current settings
 	self.settings = self.userSettings
 	
-	self.wndMain:Close()
-
+	self:OnClose()
+	
 	self:InitializeDetection()
 end
 
 -- when the Cancel button is clicked
 function ActionControls:OnCancel()
-	-- dump the settings
+	-- discard current settings
 	self.userSettings = nil
 	
+	self:OnClose()	
+end
+
+function ActionControls:OnClose()
+	GameLib.PauseGameActionInput(false)
 	self.wndMain:Close() -- hide the window
-end
-
-
-function ActionControls:OnRbKeyLockingCheck( wndHandler, wndControl, eMouseButton )
-	log.Debug("OnKeyLockingChkButtonCheck")
-	self.userSettings.mouseLockingType = EnumMouseLockingType.MovementKeys
-end
-
-function ActionControls:OnRbPositionLockingCheck( wndHandler, wndControl, eMouseButton )
-	log.Debug("OnPositionLockingChkButtonCheck")
-	self.userSettings.mouseLockingType = EnumMouseLockingType.PhisicalMovement
-end
-
-function ActionControls:OnRbDisabledLockingCheck( wndHandler, wndControl, eMouseButton )
-	log.Debug("OnRbPositionLockingCheck")
-	self.userSettings.mouseLockingType = EnumMouseLockingType.None
-end
-
-function ActionControls:OnBindMouseButtonsSignal( wndHandler, wndControl, eMouseButton )
-	self.isMouseBoundToActionsOption = true
-	self:SetMouseBindButtonsState()
-end
-
-function ActionControls:OnUnBindMouseButtonsSignal( wndHandler, wndControl, eMouseButton )
-	self.isMouseBoundToActionsOption = false
-	self:SetMouseBindButtonsState()
-end
-
-function ActionControls:TbCameraLockKeyChanging( wndHandler, wndControl, strNewText, strOldText, bAllowed )
-	log.Debug("TbCameraLockKeyChanging")
-end
-
-function ActionControls:OnTbCameraLockKeyMouseButtonDown( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
-	log.Debug("OnTbCameraLockKeyMouseButtonDown")
-end
-
-function ActionControls:OnTbTargetLockKeyMouseButtonDown( wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick, bStopPropagation )
-	log.Debug("OnTbTargetLockKeyMouseButtonDown")
-end
-
-function ActionControls:OnKeyDown(wndHandler, wndControl, strKeyName, nCode, eModifier)
-	log.Debug("ActionControls:OnKeyDown")
 end
 
 -----------------------------------------------------------------------------------------------
