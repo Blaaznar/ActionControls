@@ -185,7 +185,10 @@ function ActionControls:OnDocLoaded()
 		Apollo.RegisterEventHandler("TradeskillEngravingStationOpen", "OnGameDialogInteraction", self)
 		
 		Apollo.RegisterEventHandler("DuelStateChanged",	"OnGameDialogInteraction", self)
-		
+		Apollo.RegisterEventHandler("MatchingGameReady",	"OnGameDialogInteraction", self)
+		Apollo.RegisterEventHandler("PVPMatchFinished",	"OnGameDialogInteraction", self)
+		Apollo.RegisterEventHandler("P2PTradeInvite",	"OnGameDialogInteraction", self)
+				
 		-- Lock triggers
 		Apollo.RegisterEventHandler("SystemKeyDown", "OnSystemKeyDown", self) 
 		Apollo.RegisterEventHandler("GameClickWorld", "OnGameClickWorld", self)
