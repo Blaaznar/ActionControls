@@ -77,7 +77,6 @@ function ActionControls:new(o)
 	o.isMouseBoundToActions = false
 	o.boundKeys = {}
 	o.boundKeys.mouseLockKeys = {}
-	o.boundKeys.mouseLockToggleKeys = {}
 	o.settings = {
 		--logLevel = 4,
 		mouseLockingType = EnumMouseLockingType.MovementKeys,
@@ -285,15 +284,6 @@ function ActionControls:ReadKeyBindings()
 				end) 
 		end)
 	
-	--local bindingLAS2 = self:GetBindingByActionName(bindings, "LimitedActionSet2")
-	--self.isMouseBoundToActions = 
-	--	table.ExistsItem(bindingLAS1.arInputs, function (x) return x.eDevice == 2 and x.nCode == 0 end)
-	--	or table.ExistsItem(bindingLAS2.arInputs, function (x) return x.eDevice == 2 and x.nCode == 0 end)
-			
-	self.boundKeys.mouseLockToggleKeys = {}
-	table.insert(self.boundKeys.mouseLockToggleKeys, self:GetBoundCharsForAction(bindings, "ExplicitMouseLook"))
-	--log.Debug(LuaUtils:DataDumper(self.boundKeys.mouseLockToggleKeys))
-
 	self.boundKeys.mouseLockKeys = {}
 	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "MoveForward"))
 	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "DashForward"))
@@ -307,13 +297,6 @@ function ActionControls:ReadKeyBindings()
 	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "TurnRight"))	
 	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "Jump"))
 	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "ToggleAutoRun"))
-	
-	if self.boundKeys.mouseLockToggleKeys[1] ~= nil 
-	or self.boundKeys.mouseLockToggleKeys[2] ~= nil then
-		log.Debug("Toggle key mapped to " .. LuaUtils:DataDumper(self.boundKeys.mouseLockToggleKeys))
-	else
-		log.Info("Explicit Mouse Look keybinding is not set, to unlock press Esc key.")
-	end
 end
 
 function ActionControls:GetBoundCharsForAction(bindings, actionName)
@@ -451,9 +434,11 @@ function ActionControls:SetMouseLock(lockState)
 	end
 end
 
+-----------------------------------------------------------------------------------------------
+-- Key processing
+-----------------------------------------------------------------------------------------------
 function ActionControls:OnSystemKeyDown(key)
 	--log.Debug("OnSystemKeyDown(" .. key .. ")")
-	--log.Debug(LuaUtils:DataDumper(self.settings))
 
 	-- target locking
 	if key == KeyUtils:CharToSysKeyCode(self.settings.mouseOverTargetLockKey) then
@@ -464,16 +449,14 @@ function ActionControls:OnSystemKeyDown(key)
 			--log.Debug('target lock off')
 			self:SetMouseOverTargetLock(false)
 		end
+		return
 	end
 
 	-- toggle camera lock	
-	for _,keys in ipairs(self.boundKeys.mouseLockToggleKeys) do
-		if key == KeyUtils:CharToSysKeyCode(keys[1]) 
-		or key == KeyUtils:CharToSysKeyCode(keys[2]) then
-			--log.Debug("OnSystemKeyDown(" .. key .. ") - Manual toggle")
-			self:ToggleMouseLock()
-			return
-		end
+	if key == KeyUtils:CharToSysKeyCode(self.settings.mouseLockKey) then
+		--log.Debug("OnSystemKeyDown(" .. key .. ") - Manual toggle")
+		self:ToggleMouseLock()
+		return
 	end
 	
 	-- camera locking
@@ -691,8 +674,7 @@ end
 
 function ActionControls:OnBtnCameraLockKey_WindowKeyDown(wndHandler, wndControl, strKeyName, nScanCode, nMetakeys)
 	local key = self:OptionsProcessKey(wndHandler, strKeyName, nScanCode)
-	
-	log.Info("Camera lock key: " .. tostring(key))
+	log.Debug("Camera lock key: " .. tostring(key))
 	
 	self.userSettings.mouseLockKey = key
 
@@ -701,7 +683,7 @@ end
 
 function ActionControls:BtnTargetLockKey_WindowKeyDown( wndHandler, wndControl, strKeyName, nScanCode, nMetakeys )
 	local key = self:OptionsProcessKey(wndHandler, strKeyName, nScanCode)
-	log.Info("Target lock key: " .. tostring(key))
+	log.Debug("Target lock key: " .. tostring(key))
 
 	self.userSettings.mouseOverTargetLockKey = key
 	
