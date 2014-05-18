@@ -10,7 +10,7 @@ require "GameLib"
 -- ActionControls Module Definition
 -----------------------------------------------------------------------------------------------
 local ActionControls = {
-	_VERSION = 'ActionControls.lua 0.0.14',
+	_VERSION = 'ActionControls.lua 0.0.15',
 	_URL     = '',
 	_DESCRIPTION = 'Action control system for Wildstar'} 
 
@@ -686,8 +686,6 @@ function ActionControls:OnBtnCameraLockKey_WindowKeyDown(wndHandler, wndControl,
 	
 	if (not self:IsKeyAlreadyBound(key)) then
 		self.userSettings.mouseLockKey = key
-	else
-		log.Info("Key '" .. tostring(key) .. "' is already bound.")
 	end		
 
 	self:OptionsEndBinding(wndControl)
@@ -699,8 +697,6 @@ function ActionControls:BtnTargetLockKey_WindowKeyDown( wndHandler, wndControl, 
 
 	if (not self:IsKeyAlreadyBound(key)) then
 		self.userSettings.mouseOverTargetLockKey = key
-	else
-		log.Info("Key '" .. tostring(key) .. "' is already bound.")
 	end
 	
 	self:OptionsEndBinding(wndControl)
@@ -717,13 +713,17 @@ function ActionControls:IsKeyAlreadyBound(key)
 	
 	local bindings = GameLib.GetKeyBindings();
 	
-	if table.ExistsItem(bindings, 
+	local existingBinding = table.FindItem(bindings, 
 		function (binding)
 			return table.ExistsItem(binding.arInputs, 
 				function (arInput) 
 					return (arInput.eDevice == 1 and KeyUtils:KeybindNCodeToChar(arInput.nCode) == key)
 				end) 
-		end) then
+		end)
+		
+	if existingBinding ~= nil then
+		log.Info("Key '" .. tostring(key) .. "' is already bound to '" .. tostring(existingBinding.strActionLocalized) .. "'")
+
 		return true
 	end
 end
