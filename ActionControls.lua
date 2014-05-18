@@ -439,7 +439,11 @@ end
 -----------------------------------------------------------------------------------------------
 function ActionControls:OnSystemKeyDown(key)
 	--log.Debug("OnSystemKeyDown(" .. key .. ")")
-	if self.wndMain ~= nil and self.wndMain:IsVisible() then
+	-- must stop processing
+	local keybindForm = Apollo.FindWindowByName("KeybindForm")
+	if (self.wndMain ~= nil and self.wndMain:IsVisible()) 
+		or (keybindForm ~= nil and keybindForm:IsVisible())
+	then
 		self:SetMouseLock(false)
 		return
 	end
