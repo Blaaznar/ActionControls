@@ -133,7 +133,10 @@ function ActionControls:OnDocLoaded()
 		-- Register handlers for events, slash commands and timer, etc.
 		-- e.g. Apollo.RegisterEventHandler("KeyDown", "OnKeyDown", self)
 		Apollo.RegisterSlashCommand("ac", "OnActionControlsOn", self)
-
+		Apollo.RegisterSlashCommand("AC", "OnActionControlsOn", self)
+		Apollo.RegisterSlashCommand("ActionControls", "OnActionControlsOn", self)
+		Apollo.RegisterSlashCommand("ac-debug", "OnActionControlsOnDebug", self)
+		
 		-- Unlock triggers
 		Apollo.RegisterEventHandler("Test_MouseReturnSignal", "OnGameDialogInteraction", self)
 		
@@ -248,6 +251,21 @@ end
 -- on SlashCommand "/ac"
 function ActionControls:OnActionControlsOn()
 	self:OnShowOptionWindow()
+end
+
+-- on SlashCommand "/ac-debug"
+function ActionControls:OnActionControlsOnDebug(param, pLogLevel)
+	pLogLevel = tonumber(pLogLevel)
+
+	if pLogLevel == nil then
+		return
+	end	
+
+	if pLogLevel >= 0 and pLogLevel <= 4 then
+		logLevel = pLogLevel
+	else
+		logLevel = 3
+	end
 end
 
 -----------------------------------------------------------------------------------------------
@@ -494,7 +512,7 @@ function ActionControls:OnGameClickWorld(tPos)
 	end
 end
 
-function ActionControls:OnGameDialogInteraction(wndHandler, wndControl)
+function ActionControls:OnGameDialogInteraction()
 	-- TODO: Trigger only on window shown, not off
 	log.Debug("OnGameDialogInteraction()")
 	self:SetMouseLock(false)
