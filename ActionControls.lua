@@ -31,7 +31,7 @@ local EnumMouseLockingType =
 -- Logging
 -- TODO: Move to a class or use 3rd party logging lib
 -----------------------------------------------------------------------------------------------
-local logLevel = 3	
+local logLevel = 4	
 local log = {}
 log.Debug = function (message) 
 	if logLevel > 3 then
@@ -72,6 +72,7 @@ function ActionControls:new(o)
     -- initialize variables here
 	o.playerPrevPosition = nil
 	o.immediateMouseOverUnit = nil
+	o.lastTargetUnit = nil
 	o.isMouseOverTargetLocked = false
 	o.isMouseBoundToActions = false
 	o.boundKeys = {}
@@ -182,7 +183,7 @@ function ActionControls:OnDocLoaded()
 		Apollo.RegisterEventHandler("ToggleTradeskills", "OnGameDialogInteraction", self)
 		Apollo.RegisterEventHandler("ToggleZoneMap", "OnGameDialogInteraction", self)
 		Apollo.RegisterEventHandler("TradeskillEngravingStationOpen", "OnGameDialogInteraction", self)
-
+		
 		-- Lock triggers
 		Apollo.RegisterEventHandler("SystemKeyDown", "OnSystemKeyDown", self) 
 		Apollo.RegisterEventHandler("GameClickWorld", "OnGameClickWorld", self)
@@ -420,7 +421,8 @@ function ActionControls:SetMouseLock(lockState)
 
 	if lockState ~= GameLib.IsMouseLockOn() then
 		self:SetMouseOverTargetLock(false)
-		
+		self:SetLastTarget()
+				
 		GameLib.SetMouseLock(lockState)
 
 		-- Automatic remapping of LMB/RMB to action 1/2 on camera lock - Does not work in combat :(
@@ -433,7 +435,7 @@ function ActionControls:SetMouseLock(lockState)
 end
 
 function ActionControls:OnSystemKeyDown(key)
-	log.Debug("OnSystemKeyDown(" .. key .. ")")
+	--log.Debug("OnSystemKeyDown(" .. key .. ")")
 	--log.Debug(LuaUtils:DataDumper(self.settings))
 
 	-- target locking
@@ -459,7 +461,8 @@ function ActionControls:OnSystemKeyDown(key)
 	
 	-- camera locking
 	if self.settings.mouseLockingType == EnumMouseLockingType.PhisicalMovement 
-	and key == KeyUtils:CharToSysKeyCode("Esc") then 
+		and key == KeyUtils:CharToSysKeyCode("Esc")
+	then 
 		log.Debug("OnSystemKeyDown(" .. key .. ") - ESC pressed, turning on movement timer")
 		-- ESC directly executes GameLib.SetMouseLock(false), but that doesn't set the movement timer to on
 		Apollo.StartTimer("DetectMovementTimer")
@@ -477,14 +480,15 @@ function ActionControls:OnSystemKeyDown(key)
 end
 
 function ActionControls:OnGameClickWorld(tPos)
-	if not self.isMouseBoundToActions then
+	if not self.isMouseBoundToActions and GameLib.IsMouseLockOn() then
+		GameLib.SetTargetUnit(self.lastTargetUnit)
 		self:SetMouseLock(false)
 	end
 end
 
 function ActionControls:OnGameDialogInteraction(wndHandler, wndControl)
 	-- TODO: Trigger only on window shown, not off
-	--log.Debug("OnGameDialogInteraction()")
+	log.Debug("OnGameDialogInteraction()")
 	self:SetMouseLock(false)
 end
 
@@ -542,7 +546,7 @@ function ActionControls:OnMouseOverUnitChanged(unit)
 		Apollo.StopTimer("DelayedMouseOverTargetTimer")
 		
 		if GameLib.GetTargetUnit() == nil then
-			GameLib.SetTargetUnit(unit)
+			self:SetTarget(unit)
 		else
 			Apollo.StartTimer("DelayedMouseOverTargetTimer")
 		end
@@ -554,8 +558,21 @@ function ActionControls:OnDelayedMouseOverTargetTimer(strVar, nValue)
 	    and self.immediateMouseOverUnit ~= nil 
 	    and not self:GetMouseOverTargetLock() 
 	    and self.immediateMouseOverUnit then 
-		GameLib.SetTargetUnit(self.immediateMouseOverUnit)
+		self:SetTarget(self.immediateMouseOverUnit)
 	end
+end
+
+function ActionControls:SetTarget(unit)
+	self:SetLastTarget(unit)
+	GameLib.SetTargetUnit(unit)
+end
+
+function ActionControls:SetLastTarget(unit)
+	if unit == nil then 
+		unit = GameLib.GetTargetUnit() 
+	end
+	
+ 	self.lastTargetUnit = unit
 end
 
 -- Target locking
