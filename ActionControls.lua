@@ -10,7 +10,7 @@ require "GameLib"
 -- ActionControls Module Definition
 -----------------------------------------------------------------------------------------------
 local ActionControls = {
-	_VERSION = 'ActionControls.lua 0.0.16',
+	_VERSION = 'ActionControls.lua 0.0.17',
 	_URL     = '',
 	_DESCRIPTION = 'Action control system for Wildstar'} 
 
@@ -234,8 +234,16 @@ function ActionControls:OnRestore(eType, t)
 		return 
 	end
 
-	-- TODO: validation    
-	table.ShallowMerge(t, self.settings)
+	local status, inspectCallResult = pcall(
+	function ()
+		local settings = table.ShallowCopy(self.settings)
+		table.ShallowMerge(t, settings)
+		-- TODO: validation
+		self.settings = settings
+	end)
+	if not status then
+		log.Error("Error while loading user settings. Default values will be used.")
+	end
 end
 
 -----------------------------------------------------------------------------------------------
