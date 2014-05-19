@@ -10,7 +10,7 @@ require "GameLib"
 -- ActionControls Module Definition
 -----------------------------------------------------------------------------------------------
 local ActionControls = {
-	_VERSION = 'ActionControls.lua 0.0.15',
+	_VERSION = 'ActionControls.lua 0.0.16',
 	_URL     = '',
 	_DESCRIPTION = 'Action control system for Wildstar'} 
 
@@ -80,8 +80,8 @@ function ActionControls:new(o)
 	o.settings = {
 		--logLevel = 4,
 		mouseLockingType = EnumMouseLockingType.MovementKeys,
-		mouseLockKey = "`",
-		mouseOverTargetLockKey = "Caps Lock"		
+		mouseLockKey = nil,
+		mouseOverTargetLockKey = nil
 	}
 	
     return o
@@ -715,7 +715,8 @@ function ActionControls:IsKeyAlreadyBound(key)
 	
 	local existingBinding = table.FindItem(bindings, 
 		function (binding)
-			return table.ExistsItem(binding.arInputs, 
+			return binding.strAction ~= "ExplicitMouseLook" and
+				table.ExistsItem(binding.arInputs, 
 				function (arInput) 
 					return (arInput.eDevice == 1 and KeyUtils:KeybindNCodeToChar(arInput.nCode) == key)
 				end) 
