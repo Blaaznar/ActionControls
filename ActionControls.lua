@@ -10,15 +10,16 @@ require "GameLib"
 -- ActionControls Module Definition
 -----------------------------------------------------------------------------------------------
 local ActionControls = {
-	_VERSION = 'ActionControls.lua 0.0.17',
-	_URL     = '',
+	_VERSION = '0.0.17',
+	_URL     = 'http://www.curse.com/ws-addons/wildstar/220537-actioncontrols',
 	_DESCRIPTION = 'Action control system for Wildstar'} 
 
 -----------------------------------------------------------------------------------------------
 -- Constants
 -----------------------------------------------------------------------------------------------
-local KeyUtils
-local LuaUtils
+local KeyUtils = Apollo.GetPackage("Blaz:Lib:KeyUtils-0.2").tPackage
+local LuaUtils = Apollo.GetPackage("Blaz:Lib:LuaUtils-0.1").tPackage
+local SimpleLog = Apollo.GetPackage("Blaz:Lib:SimpleLog-0.1").tPackage
 
 local EnumMouseLockingType =
 {
@@ -28,48 +29,16 @@ local EnumMouseLockingType =
 }
 
 -----------------------------------------------------------------------------------------------
--- Logging
--- TODO: Move to a class or use 3rd party logging lib
------------------------------------------------------------------------------------------------
-local logLevel = 3	
-local log = {}
-log.Debug = function (message) 
-	if logLevel > 3 then
-		Print("[ActionControls - Debug] : " .. tostring(message))
-	end
-end
-
-log.Info = function (message) 
-	if logLevel > 2 then
-		Print("[ActionControls] : " .. tostring(message))
-	end
-end
-
-log.Warn = function (message) 
-	if logLevel > 1 then
-		Print("[ActionControls - Warning] : " .. tostring(message))
-	end
-end
-
-log.Error = function (message) 
-	if logLevel > 0 then
-		local strMessage = tostring(message)
-	
-		Print("[ActionControls - Error] : " .. strMessage)
-		Apollo.AddAddonErrorText(self, strMessage)
-	end
-end
-	
-
------------------------------------------------------------------------------------------------
 -- Initialization
 -----------------------------------------------------------------------------------------------
-function ActionControls:new(o)
-    o = o or {}
+function ActionControls:new(log)
+    o = {}
     setmetatable(o, self)
     self.__index = self 
 
-    -- initialize variables here
+	o.log = log
+	
+    -- variables
 	o.playerPrevPosition = nil
 	o.immediateMouseOverUnit = nil
 	o.lastTargetUnit = nil
@@ -78,7 +47,6 @@ function ActionControls:new(o)
 	o.boundKeys = {}
 	o.boundKeys.mouseLockKeys = {}
 	o.settings = {
-		--logLevel = 4,
 		mouseLockingType = EnumMouseLockingType.MovementKeys,
 		mouseLockKey = nil,
 		mouseOverTargetLockKey = nil
@@ -88,11 +56,15 @@ function ActionControls:new(o)
 end
 
 function ActionControls:Init()
+	self.log:SetLogName("ActionControls")
+	self.log:SetLogLevel(3)
+	
 	local bHasConfigureFunction = true
 	local strConfigureButtonText = "Configure ActionControls"
 	local tDependencies = {
 		"Blaz:Lib:KeyUtils-0.2",
-		"Blaz:Lib:LuaUtils-0.1"
+		"Blaz:Lib:LuaUtils-0.1",
+		"Blaz:Lib:SimpleLog-0.1"
 	}
     Apollo.RegisterAddon(self, bHasConfigureFunction, strConfigureButtonText, tDependencies)
 end
@@ -101,9 +73,6 @@ end
 -- ActionControls OnLoad
 -----------------------------------------------------------------------------------------------
 function ActionControls:OnLoad()
-	KeyUtils = Apollo.GetPackage("Blaz:Lib:KeyUtils-0.2").tPackage
-	LuaUtils = Apollo.GetPackage("Blaz:Lib:LuaUtils-0.1").tPackage
-
     -- load our form file
 	self.xmlDoc = XmlDoc.CreateFromFile("ActionControls.xml")
 	self.xmlDoc:RegisterCallback("OnDocLoaded", self)
@@ -117,7 +86,7 @@ end
 -- ActionControls OnDocLoaded
 -----------------------------------------------------------------------------------------------
 function ActionControls:OnDocLoaded()
-	--log.Debug("OnDocLoaded()")
+	--self.log:Debug("OnDocLoaded()")
 	if self.xmlDoc ~= nil and self.xmlDoc:IsLoaded() then
 	    self.wndMain = Apollo.LoadForm(self.xmlDoc, "ActionControlsForm", nil, self)
 		if self.wndMain == nil then
@@ -234,15 +203,19 @@ function ActionControls:OnRestore(eType, t)
 		return 
 	end
 
+	self:RestoreUserSettings()
+end
+
+function ActionControls:RestoreUserSettings()
 	local status, inspectCallResult = pcall(
 	function ()
 		local settings = table.ShallowCopy(self.settings)
 		table.ShallowMerge(t, settings)
-		-- TODO: validation
+		-- TODO: validate settings
 		self.settings = settings
 	end)
 	if not status then
-		log.Error("Error while loading user settings. Default values will be used.")
+		self.log:Error("Error while loading user settings. Default values will be used.")
 	end
 end
 
@@ -261,18 +234,8 @@ function ActionControls:OnActionControlsOn()
 end
 
 -- on SlashCommand "/ac-debug"
-function ActionControls:OnActionControlsOnDebug(param, pLogLevel)
-	pLogLevel = tonumber(pLogLevel)
-
-	if pLogLevel == nil then
-		return
-	end	
-
-	if pLogLevel >= 0 and pLogLevel <= 4 then
-		logLevel = pLogLevel
-	else
-		logLevel = 3
-	end
+function ActionControls:OnActionControlsOnDebug()
+	self.log:SetLogLevel(4)
 end
 
 -----------------------------------------------------------------------------------------------
@@ -311,14 +274,14 @@ function ActionControls:GetBoundCharsForAction(bindings, actionName)
 	local binding = self:GetBindingByActionName(bindings, actionName)
 
 	if binding == nil then
-		log.Debug("GetBoundCharsForAction(...) - no suitable bindings found for '" .. actionName .. "'")
+		self.log:Debug("GetBoundCharsForAction(...) - no suitable bindings found for '" .. actionName .. "'")
 		return nil
 	end
 	
 	-- Cannot support key modifiers at this point	
 	-- todo filtering by eDevice == 1 and eModifier == 0
 	
-	log.Debug("GetBoundCharsForAction(): " .. LuaUtils:DataDumper(binding))
+	self.log:Debug("GetBoundCharsForAction(): " .. LuaUtils:DataDumper(binding))
 
 	local boundChars = 	{	
 		[1] = KeyUtils:KeybindNCodeToChar(binding.arInputs[1].nCode),
@@ -335,7 +298,7 @@ end
 
 function ActionControls:BindMouseButtons()
 	if GameLib.GetPlayerUnit():IsInCombat() then
-		log.Warn("In combat, changing bindings is not possible at this moment.")
+		self.log:Warn("In combat, changing bindings is not possible at this moment.")
 		return
 	end
 	
@@ -349,7 +312,7 @@ function ActionControls:BindMouseButtons()
 						or (arInput.eDevice == 2 and arInput.nCode == 1)
 				end) 
 		end) then
-		log.Warn("Mouse buttons are already bound, please manualy unbind them from the game's Keybind window.")
+		self.log:Warn("Mouse buttons are already bound, please manualy unbind them from the game's Keybind window.")
 		return
 	end
 
@@ -365,12 +328,12 @@ function ActionControls:BindMouseButtons()
 	
 	self.isMouseBoundToActions = true
 	
-	log.Debug("Left and right mouse buttons bound to 'Action 1' and 'Action 2'.")
+	self.log:Debug("Left and right mouse buttons bound to 'Action 1' and 'Action 2'.")
 end
 
 function ActionControls:UnbindMouseButtons()
 	if GameLib.GetPlayerUnit():IsInCombat() then
-		log.Warn("In combat, changing bindings is not possible at this moment.")
+		self.log:Warn("In combat, changing bindings is not possible at this moment.")
 		return
 	end
 	
@@ -388,16 +351,16 @@ function ActionControls:UnbindMouseButtons()
 	
 	self.isMouseBoundToActions = false	
 	
-	log.Debug("Left and right mouse buttons unbound from 'Action 1' and 'Action 2'.")
+	self.log:Debug("Left and right mouse buttons unbound from 'Action 1' and 'Action 2'.")
 end
 
 function ActionControls:OnKeyBindingKeyChanged(strKeybind)
-	log.Debug("OnKeyBindingKeyChanged()")
+	self.log:Debug("OnKeyBindingKeyChanged()")
 	self:ReadKeyBindings()
 end
 
 function ActionControls:OnKeyBindingUpdated()
-	log.Debug("OnKeyBindingUpdated()")
+	self.log:Debug("OnKeyBindingUpdated()")
 	self:ReadKeyBindings()
 end
 
@@ -411,10 +374,10 @@ function ActionControls:InitializeDetection(lockState)
 	
 	if lockState then
 		Apollo.StopTimer("DetectMovementTimer")
-		--log.Debug('timer stopped')
+		--self.log:Debug('timer stopped')
 	elseif self.settings.mouseLockingType == EnumMouseLockingType.PhisicalMovement then
 		Apollo.StartTimer("DetectMovementTimer")
-		--log.Debug('timer started')
+		--self.log:Debug('timer started')
 	end
 end
 
@@ -423,7 +386,7 @@ function ActionControls:ToggleMouseLock()
 end
 
 function ActionControls:SetMouseLock(lockState) 
-	--log.Debug("SetMouseLock(lockState) = " .. tostring(lockState))
+	--self.log:Debug("SetMouseLock(lockState) = " .. tostring(lockState))
 
 	self:InitializeDetection(lockState)
 
@@ -446,7 +409,7 @@ end
 -- Key processing
 -----------------------------------------------------------------------------------------------
 function ActionControls:OnSystemKeyDown(key)
-	--log.Debug("OnSystemKeyDown(" .. key .. ")")
+	--self.log:Debug("OnSystemKeyDown(" .. key .. ")")
 	-- must stop processing
 	local keybindForm = Apollo.FindWindowByName("KeybindForm")
 	if (self.wndMain ~= nil and self.wndMain:IsVisible()) 
@@ -459,10 +422,10 @@ function ActionControls:OnSystemKeyDown(key)
 	-- target locking
 	if key == KeyUtils:CharToSysKeyCode(self.settings.mouseOverTargetLockKey) then
 		if GameLib.GetTargetUnit() ~= nil then
-			--log.Debug('target lock toggle')
+			--self.log:Debug('target lock toggle')
 			self:SetMouseOverTargetLock(not self:GetMouseOverTargetLock())
 		else
-			--log.Debug('target lock off')
+			--self.log:Debug('target lock off')
 			self:SetMouseOverTargetLock(false)
 		end
 		return
@@ -470,7 +433,7 @@ function ActionControls:OnSystemKeyDown(key)
 
 	-- toggle camera lock	
 	if key == KeyUtils:CharToSysKeyCode(self.settings.mouseLockKey) then
-		--log.Debug("OnSystemKeyDown(" .. key .. ") - Manual toggle")
+		--self.log:Debug("OnSystemKeyDown(" .. key .. ") - Manual toggle")
 		self:ToggleMouseLock()
 		return
 	end
@@ -479,7 +442,7 @@ function ActionControls:OnSystemKeyDown(key)
 	if self.settings.mouseLockingType == EnumMouseLockingType.PhisicalMovement 
 		and key == KeyUtils:CharToSysKeyCode("Esc")
 	then 
-		log.Debug("OnSystemKeyDown(" .. key .. ") - ESC pressed, turning on movement timer")
+		self.log:Debug("OnSystemKeyDown(" .. key .. ") - ESC pressed, turning on movement timer")
 		-- ESC directly executes GameLib.SetMouseLock(false), but that doesn't set the movement timer to on
 		Apollo.StartTimer("DetectMovementTimer")
 		return
@@ -487,7 +450,7 @@ function ActionControls:OnSystemKeyDown(key)
 		for _,keys in ipairs(self.boundKeys.mouseLockKeys) do
 			if key == KeyUtils:CharToSysKeyCode(keys[1]) 
 			or key == KeyUtils:CharToSysKeyCode(keys[2]) then
-				--log.Debug("OnSystemKeyDown(" .. key .. ") - Manual movement lock")
+				--self.log:Debug("OnSystemKeyDown(" .. key .. ") - Manual movement lock")
 				self:SetMouseLock(true)
 				return
 			end
@@ -507,7 +470,7 @@ end
 
 function ActionControls:OnGameDialogInteraction()
 	-- TODO: Trigger only on window shown, not off
-	log.Debug("OnGameDialogInteraction()")
+	self.log:Debug("OnGameDialogInteraction()")
 	self:SetMouseLock(false)
 end
 
@@ -518,7 +481,7 @@ function ActionControls:OnDetectMovementTimer(strVar, nValue)
 	self.playerPrevPosition = position
 
 	if not GameLib.IsMouseLockOn() and ActionControls:IsPlayerPositionChanged(position, prevPosition) then
-		--log.Debug("OnDetectMovementTimer() - moving induced lock")
+		--self.log:Debug("OnDetectMovementTimer() - moving induced lock")
 		self:SetMouseLock(true)
 	elseif self.settings.mouseLockingType == EnumMouseLockingType.PhisicalMovement then
 		Apollo.StartTimer("DetectMovementTimer")
@@ -607,9 +570,9 @@ function ActionControls:SetMouseOverTargetLock(lockState)
 	
 	-- TODO: Visual representation of target lock on target unit frame (i.e. lock icon or outline)
 	if lockState then
-		log.Info("MouseOver target lock set on '" .. GameLib.GetTargetUnit():GetName() .. "'.")
+		self.log:Info("MouseOver target lock set on '" .. GameLib.GetTargetUnit():GetName() .. "'.")
 	else
-		log.Info("Removed target lock from '" .. GameLib.GetTargetUnit():GetName() .. "'.")
+		self.log:Info("Removed target lock from '" .. GameLib.GetTargetUnit():GetName() .. "'.")
 	end
 	
 	self.isMouseOverTargetLocked = lockState
@@ -657,23 +620,23 @@ function ActionControls:SetMouseBindButtonsState()
 end
 
 function ActionControls:OnRbKeyLockingCheck( wndHandler, wndControl, eMouseButton )
-	log.Debug("OnKeyLockingChkButtonCheck")
+	self.log:Debug("OnKeyLockingChkButtonCheck")
 	self.userSettings.mouseLockingType = EnumMouseLockingType.MovementKeys
 end
 
 function ActionControls:OnRbPositionLockingCheck( wndHandler, wndControl, eMouseButton )
-	log.Debug("OnPositionLockingChkButtonCheck")
+	self.log:Debug("OnPositionLockingChkButtonCheck")
 	self.userSettings.mouseLockingType = EnumMouseLockingType.PhisicalMovement
 end
 
 function ActionControls:OnRbDisabledLockingCheck( wndHandler, wndControl, eMouseButton )
-	log.Debug("OnRbPositionLockingCheck")
+	self.log:Debug("OnRbPositionLockingCheck")
 	self.userSettings.mouseLockingType = EnumMouseLockingType.None
 end
 
 -- Binding keys
 function ActionControls:OnBindMouseButtonsSignal( wndHandler, wndControl, eMouseButton )
-	log.Debug("OnBindMouseButtonsSignal")
+	self.log:Debug("OnBindMouseButtonsSignal")
 	
 	self.isMouseBoundToActionsOption = true
 	self:SetMouseBindButtonsState()
@@ -690,7 +653,7 @@ end
 
 function ActionControls:OnBtnCameraLockKey_WindowKeyDown(wndHandler, wndControl, strKeyName, nScanCode, nMetakeys)
 	local key = self:OptionsProcessKey(wndHandler, strKeyName, nScanCode)
-	log.Debug("Camera lock key: " .. tostring(key))
+	self.log:Debug("Camera lock key: " .. tostring(key))
 	
 	if (not self:IsKeyAlreadyBound(key)) then
 		self.userSettings.mouseLockKey = key
@@ -701,7 +664,7 @@ end
 
 function ActionControls:BtnTargetLockKey_WindowKeyDown( wndHandler, wndControl, strKeyName, nScanCode, nMetakeys )
 	local key = self:OptionsProcessKey(wndHandler, strKeyName, nScanCode)
-	log.Debug("Target lock key: " .. tostring(key))
+	self.log:Debug("Target lock key: " .. tostring(key))
 
 	if (not self:IsKeyAlreadyBound(key)) then
 		self.userSettings.mouseOverTargetLockKey = key
@@ -731,7 +694,7 @@ function ActionControls:IsKeyAlreadyBound(key)
 		end)
 		
 	if existingBinding ~= nil then
-		log.Info("Key '" .. tostring(key) .. "' is already bound to '" .. tostring(existingBinding.strActionLocalized) .. "'")
+		self.log:Info("Key '" .. tostring(key) .. "' is already bound to '" .. tostring(existingBinding.strActionLocalized) .. "'")
 
 		return true
 	end
@@ -760,7 +723,7 @@ end
 function ActionControls:OnOK()
 	if self.isMouseBoundToActionsOption ~= self.isMouseBoundToActions then
 		if GameLib.GetPlayerUnit():IsInCombat() then
-			log.Warn("In combat, changing bindings is not possible at this moment.")
+			self.log:Warn("In combat, changing bindings is not possible at this moment.")
 			return
 		end
 	
@@ -795,7 +758,9 @@ end
 -----------------------------------------------------------------------------------------------
 -- ActionControls Instance
 -----------------------------------------------------------------------------------------------
-local ActionControlsInst = ActionControls:new()
+local LogInst = SimpleLog:new()
+local ActionControlsInst = ActionControls:new(LogInst) -- dependency injection
+
 ActionControlsInst:Init()
 
 
