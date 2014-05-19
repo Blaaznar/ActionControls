@@ -31,14 +31,14 @@ local EnumMouseLockingType =
 -----------------------------------------------------------------------------------------------
 -- Initialization
 -----------------------------------------------------------------------------------------------
-function ActionControls:new(log)
+function ActionControls:new(logInst)
     o = {}
     setmetatable(o, self)
     self.__index = self 
 
-	o.log = log
-	
     -- variables
+	o.log = logInst
+
 	o.playerPrevPosition = nil
 	o.immediateMouseOverUnit = nil
 	o.lastTargetUnit = nil
@@ -46,6 +46,7 @@ function ActionControls:new(log)
 	o.isMouseBoundToActions = false
 	o.boundKeys = {}
 	o.boundKeys.mouseLockKeys = {}
+
 	o.settings = {
 		mouseLockingType = EnumMouseLockingType.MovementKeys,
 		mouseLockKey = nil,
@@ -242,6 +243,16 @@ end
 -- Game keybindings
 -----------------------------------------------------------------------------------------------
 
+function ActionControls:OnKeyBindingKeyChanged(strKeybind)
+	self.log:Debug("OnKeyBindingKeyChanged()")
+	self:ReadKeyBindings()
+end
+
+function ActionControls:OnKeyBindingUpdated()
+	self.log:Debug("OnKeyBindingUpdated()")
+	self:ReadKeyBindings()
+end
+
 function ActionControls:ReadKeyBindings()
 	--GameLib.CodeEnumInputAction
 	local bindings = GameLib.GetKeyBindings();
@@ -354,16 +365,6 @@ function ActionControls:UnbindMouseButtons()
 	self.log:Debug("Left and right mouse buttons unbound from 'Action 1' and 'Action 2'.")
 end
 
-function ActionControls:OnKeyBindingKeyChanged(strKeybind)
-	self.log:Debug("OnKeyBindingKeyChanged()")
-	self:ReadKeyBindings()
-end
-
-function ActionControls:OnKeyBindingUpdated()
-	self.log:Debug("OnKeyBindingUpdated()")
-	self:ReadKeyBindings()
-end
-
 -----------------------------------------------------------------------------------------------
 -- MouseLocking related functions
 -----------------------------------------------------------------------------------------------
@@ -405,12 +406,28 @@ function ActionControls:SetMouseLock(lockState)
 	end
 end
 
------------------------------------------------------------------------------------------------
+function ActionControls:OnGameClickWorld(tPos)
+	if GameLib.IsMouseLockOn() then
+		GameLib.SetTargetUnit(self.lastTargetUnit)
+		
+		if not self.isMouseBoundToActions then
+			self:SetMouseLock(false)
+		end
+	end
+end
+
+function ActionControls:OnGameDialogInteraction()
+	-- TODO: Trigger only on window shown, not off
+	self.log:Debug("OnGameDialogInteraction()")
+	self:SetMouseLock(false)
+end
+
+-------------------------------------------------------------------------------
 -- Key processing
------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 function ActionControls:OnSystemKeyDown(key)
 	--self.log:Debug("OnSystemKeyDown(" .. key .. ")")
-	-- must stop processing
+	-- stop processing keys if configuration or keybind windows are open
 	local keybindForm = Apollo.FindWindowByName("KeybindForm")
 	if (self.wndMain ~= nil and self.wndMain:IsVisible()) 
 		or (keybindForm ~= nil and keybindForm:IsVisible())
@@ -431,7 +448,7 @@ function ActionControls:OnSystemKeyDown(key)
 		return
 	end
 
-	-- toggle camera lock	
+	-- camera lock toggle
 	if key == KeyUtils:CharToSysKeyCode(self.settings.mouseLockKey) then
 		--self.log:Debug("OnSystemKeyDown(" .. key .. ") - Manual toggle")
 		self:ToggleMouseLock()
@@ -450,7 +467,7 @@ function ActionControls:OnSystemKeyDown(key)
 		for _,keys in ipairs(self.boundKeys.mouseLockKeys) do
 			if key == KeyUtils:CharToSysKeyCode(keys[1]) 
 			or key == KeyUtils:CharToSysKeyCode(keys[2]) then
-				--self.log:Debug("OnSystemKeyDown(" .. key .. ") - Manual movement lock")
+				self.log:Debug("OnSystemKeyDown(" .. key .. ") - Manual movement lock")
 				self:SetMouseLock(true)
 				return
 			end
@@ -458,30 +475,16 @@ function ActionControls:OnSystemKeyDown(key)
 	end
 end
 
-function ActionControls:OnGameClickWorld(tPos)
-	if GameLib.IsMouseLockOn() then
-		GameLib.SetTargetUnit(self.lastTargetUnit)
-		
-		if not self.isMouseBoundToActions then
-			self:SetMouseLock(false)
-		end
-	end
-end
-
-function ActionControls:OnGameDialogInteraction()
-	-- TODO: Trigger only on window shown, not off
-	self.log:Debug("OnGameDialogInteraction()")
-	self:SetMouseLock(false)
-end
-
--- Positional locking (phisical movement) - Thanks to Casstiel from Steer addon
-function ActionControls:OnDetectMovementTimer(strVar, nValue)
+-------------------------------------------------------------------------------
+-- Positional locking (physical movement) - Thanks to Casstiel from Steer addon
+-------------------------------------------------------------------------------
+function ActionControls:OnDetectMovementTimer()
 	local position = self:GetPlayerPosition()
 	local prevPosition = self.playerPrevPosition
 	self.playerPrevPosition = position
 
 	if not GameLib.IsMouseLockOn() and ActionControls:IsPlayerPositionChanged(position, prevPosition) then
-		--self.log:Debug("OnDetectMovementTimer() - moving induced lock")
+		self.log:Debug("OnDetectMovementTimer() - moving induced lock")
 		self:SetMouseLock(true)
 	elseif self.settings.mouseLockingType == EnumMouseLockingType.PhisicalMovement then
 		Apollo.StartTimer("DetectMovementTimer")
@@ -558,6 +561,14 @@ function ActionControls:SetLastTarget(unit)
 end
 
 -- Target locking
+function ActionControls:GetMouseOverTargetLock(lockState)
+	if GameLib.GetTargetUnit() == nil then
+		return false;
+	end
+		
+	return self.isMouseOverTargetLocked;
+end
+
 function ActionControls:SetMouseOverTargetLock(lockState)
 	if lockState == self.isMouseOverTargetLocked then
 		return
@@ -576,14 +587,6 @@ function ActionControls:SetMouseOverTargetLock(lockState)
 	end
 	
 	self.isMouseOverTargetLocked = lockState
-end
-
-function ActionControls:GetMouseOverTargetLock(lockState)
-	if GameLib.GetTargetUnit() == nil then
-		return false;
-	end
-		
-	return self.isMouseOverTargetLocked;
 end
 
 -----------------------------------------------------------------------------------------------
