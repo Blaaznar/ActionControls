@@ -68,7 +68,7 @@ function KeyUtils:new(logInst)
     self.__index = self 
 
     -- initialize variables here
-	o.logInst = logInst
+	o.log = logInst
 	
     return o
 end
@@ -81,26 +81,30 @@ function KeyUtils:KeybindNCodeToChar(nCode)
 	return nCodeKeyMap[nCode]
 end
 
-function KeyUtils:Bind(actionName, index, eDevice, nCode, pBindings)
+function KeyUtils:Bind(actionName, index, eDevice, nCode, unbindConflictingBindings, pBindings)
 	assert(not GameLib.GetPlayerUnit():IsInCombat(), "In combat, changing bindings is not possible at this moment.")
 	assert(index, error("Binding index not provided."))
 	assert(eDevice, error("Binding eDevice not provided."))
 	assert(nCode, error("Binding nCode not provided."))
 	
+	local inputKeyName = self:GetInputKeyName(eDevice, nCode)
 	local bindings = pBindings or GameLib.GetKeyBindings();
+		
+	if unbindConflictingBindings then
+		self:UnbindByInput(eDevice, nCode, pBindings)
+	else
+		assert(not self:IsBound(bindings), 
+			self.log:Warn(inputKeyName .. " is already bound, please manually unbind it from the game's Keybind window."))
+	end
+	
 	local binding = self:GetBindingByActionName(bindings, actionName)
-
 	binding.arInputs[index].eDevice = eDevice
 	binding.arInputs[index].nCode = nCode
 	
-	GameLib.SetKeyBindings(bindings)
-	
-	self.log:Debug("Bound binding for '" .. actionName .. "' at index " .. index .. ".")
+	self.log:Debug("Bound binding for '" .. actionName .. "' at index " .. index .. " to: " .. inputKeyName)
 end
 
 function KeyUtils:Unbind(actionName, index, pBindings)
-	assert(not GameLib.GetPlayerUnit():IsInCombat(), "In combat, changing bindings is not possible at this moment.")
-	
 	local bindings = pBindings or GameLib.GetKeyBindings();
 	local binding = self:GetBindingByActionName(bindings, actionName)
 
@@ -110,15 +114,67 @@ function KeyUtils:Unbind(actionName, index, pBindings)
 			binding.arInputs[i].nCode = 0    
 		end		
 
-		self.log:Debug("Unbound binding for '" .. actionName .. "' at index " .. i .. ".")
+		self.log:Info("Unbound binding for '" .. actionName .. "' at index " .. i .. ".")
 	else 
 		binding.arInputs[index].eDevice = 0
 		binding.arInputs[index].nCode = 0
 		
-		self.log:Debug("Unbound binding for '" .. actionName .. "' at index " .. index .. ".")
+		self.log:Info("Unbound binding for '" .. actionName .. "' at index " .. index .. ".")
 	end
+end
+
+function KeyUtils:UnbindByInput(eDevice, nCode, pBindings)
+	local bindings = pBindings or GameLib.GetKeyBindings();
+	for _, binding in ipairs(bindings) do
+		for _, arInput in ipairs(binding.arInputs) do
+			if arInput.eDevice == eDevice and arInput.nCode == nCode then
+				arInput.eDevice = 0
+				arInput.nCode = 0
+				self.log:Info("Unbound " .. self:GetInputKeyName(eDevice, nCode) .. " from '" .. binding.strAction .. "'.")
+			end
+		end
+	end
+end
+
+function KeyUtils:CommitBindings(bindings)
+	assert(bindings, "Bindings not provided.")
+	assert(not GameLib.GetPlayerUnit():IsInCombat(), "In combat, changing bindings is not possible at this moment.")
 
 	GameLib.SetKeyBindings(bindings)
+	self.log:Debug("Bindings saved.")
+end
+
+function KeyUtils:IsBound(eDevice, nCode, pBindings)
+	local bindings = pBindings or GameLib.GetKeyBindings();
+	
+	return table.ExistsItem(bindings, 
+		function (binding)
+			return table.ExistsItem(binding.arInputs, 
+				function (arInput) 
+					return arInput.eDevice == eDevice and arInput.nCode == nCode
+				end) 
+		end)
+end
+
+
+function KeyUtils:GetBindingByActionName(bindings, actionName)
+	return table.FindItem(bindings, function(a) return a.strAction == actionName end)
+end
+
+function KeyUtils:GetInputKeyName(eDevice, nCode)
+	if eDevice == 2
+		return "Mouse button " .. tostring(nCode + 1)
+	else if eDevice == 1
+		local keyName = self:KeybindNCodeToChar(nCode)
+		
+		if keyName ~= nil then
+			return keyName
+		else
+			return "Unknown key"
+		end
+	else
+		return "Unknown"
+	end
 end
 
 -- Register Library

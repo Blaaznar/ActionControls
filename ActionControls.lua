@@ -261,13 +261,7 @@ function ActionControls:ReadKeyBindings()
 	local bindings = GameLib.GetKeyBindings();
 	
 	-- check if LMB is bound to any action
-	self.isMouseBoundToActions = table.ExistsItem(bindings, 
-		function (binding)
-			return table.ExistsItem(binding.arInputs, 
-				function (arInput) 
-					return arInput.eDevice == 2 and arInput.nCode == 0 
-				end) 
-		end)
+	self.isMouseBoundToActions = self.keyUtils:IsBound(2, 0, bindings)
 	
 	self.boundKeys.mouseLockKeys = {}
 	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "MoveForward"))
@@ -285,7 +279,7 @@ function ActionControls:ReadKeyBindings()
 end
 
 function ActionControls:GetBoundCharsForAction(bindings, actionName)
-	local binding = self:GetBindingByActionName(bindings, actionName)
+	local binding = self.keyUtils:GetBindingByActionName(bindings, actionName)
 
 	if binding == nil then
 		self.log:Debug("GetBoundCharsForAction(...) - no suitable bindings found for '" .. actionName .. "'")
@@ -305,11 +299,6 @@ function ActionControls:GetBoundCharsForAction(bindings, actionName)
 	return boundChars
 end
 
-function ActionControls:GetBindingByActionName(bindings, actionName)
-	return table.FindItem(bindings, function(a) return a.strAction == actionName end)
-end
-
-
 function ActionControls:BindMouseButtons()
 	if GameLib.GetPlayerUnit():IsInCombat() then
 		self.log:Warn("In combat, changing bindings is not possible at this moment.")
@@ -318,31 +307,13 @@ function ActionControls:BindMouseButtons()
 	
 	local bindings = GameLib.GetKeyBindings();
 
-	if table.ExistsItem(bindings, 
-		function (binding)
-			return table.ExistsItem(binding.arInputs, 
-				function (arInput) 
-					return (arInput.eDevice == 2 and arInput.nCode == 0)
-						or (arInput.eDevice == 2 and arInput.nCode == 1)
-				end) 
-		end) then
-		self.log:Warn("Mouse buttons are already bound, please manualy unbind them from the game's Keybind window.")
-		return
-	end
-
-	local lmbBinding = self:GetBindingByActionName(bindings, "LimitedActionSet1")
-	lmbBinding.arInputs[2].eDevice = 2
-	lmbBinding.arInputs[2].nCode = 0
-	
-	local rmbBinding = self:GetBindingByActionName(bindings, "DirectionalDash")
-	rmbBinding.arInputs[2].eDevice = 2
-	rmbBinding.arInputs[2].nCode = 1
-
-	GameLib.SetKeyBindings(bindings)
+	self.keyUtils:Bind("LimitedActionSet1", 2, 2, 0, true, bindings)
+	self.keyUtils:Bind("DirectionalDash", 2, 2, 1, true, bindings)
+	self.keyUtils:CommitBindings(bindings)
 	
 	self.isMouseBoundToActions = true
 	
-	self.log:Debug("Left and right mouse buttons bound to 'Action 1' and 'Action 2'.")
+	self.log:Debug("Left and right mouse buttons bound to 'Action 1' and 'Directional dash'.")
 end
 
 function ActionControls:UnbindMouseButtons()
@@ -353,19 +324,13 @@ function ActionControls:UnbindMouseButtons()
 	
 	local bindings = GameLib.GetKeyBindings();
 	
-	local lmbBinding = self:GetBindingByActionName(bindings, "LimitedActionSet1")
-	lmbBinding.arInputs[2].eDevice = 0
-	lmbBinding.arInputs[2].nCode = 0
-	
-	local rmbBinding = self:GetBindingByActionName(bindings, "LimitedActionSet2")
-	rmbBinding.arInputs[2].eDevice = 0
-	rmbBinding.arInputs[2].nCode = 0
-
-	GameLib.SetKeyBindings(bindings)
+	self.keyUtils:Unbind("LimitedActionSet1", 2, bindings)
+	self.keyUtils:Unbind("DirectionalDash", 2, bindings)
+	self.keyUtils:CommitBindings(bindings)
 	
 	self.isMouseBoundToActions = false	
 	
-	self.log:Debug("Left and right mouse buttons unbound from 'Action 1' and 'Action 2'.")
+	self.log:Debug("Left and right mouse buttons unbound from 'Action 1' and 'Directional dash'.")
 end
 
 -----------------------------------------------------------------------------------------------
@@ -770,5 +735,4 @@ local keyUtilsInst = KeyUtils:new(logInst)
 local actionControlsInst = ActionControls:new(logInst, keyUtilsInst) -- dependency injection
 
 actionControlsInst:Init()
-
 
