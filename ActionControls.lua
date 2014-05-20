@@ -263,19 +263,20 @@ function ActionControls:ReadKeyBindings()
 	-- check if LMB is bound to any action
 	self.isMouseBoundToActions = self.keyUtils:IsBound(2, 0, 0, bindings)
 	
-	self.boundKeys.mouseLockKeys = {}
-	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "MoveForward"))
-	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "DashForward"))
-	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "MoveBackward"))
-	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "DashBackward"))
-	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "DashLeft"))
-	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "StrafeLeft"))
-	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "TurnLeft"))
-	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "DashRight"))
-	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "StrafeRight"))
-	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "TurnRight"))	
-	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "Jump"))
-	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "ToggleAutoRun"))
+	self.boundKeys.mouseLockKeys = {
+		self:GetBoundCharsForAction(bindings, "MoveForward"),
+		self:GetBoundCharsForAction(bindings, "DashForward"),
+		self:GetBoundCharsForAction(bindings, "MoveBackward"),
+		self:GetBoundCharsForAction(bindings, "DashBackward"),
+		self:GetBoundCharsForAction(bindings, "DashLeft"),
+		self:GetBoundCharsForAction(bindings, "StrafeLeft"),
+		self:GetBoundCharsForAction(bindings, "TurnLeft"),
+		self:GetBoundCharsForAction(bindings, "DashRight"),
+		self:GetBoundCharsForAction(bindings, "StrafeRight"),
+		self:GetBoundCharsForAction(bindings, "TurnRight"),
+		self:GetBoundCharsForAction(bindings, "Jump"),
+		self:GetBoundCharsForAction(bindings, "ToggleAutoRun")
+	}
 end
 
 function ActionControls:GetBoundCharsForAction(bindings, actionName)
