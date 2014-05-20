@@ -261,7 +261,7 @@ function ActionControls:ReadKeyBindings()
 	local bindings = GameLib.GetKeyBindings();
 	
 	-- check if LMB is bound to any action
-	self.isMouseBoundToActions = self.keyUtils:IsBound(2, 0, bindings)
+	self.isMouseBoundToActions = self.keyUtils:IsBound(2, 0, 0, bindings)
 	
 	self.boundKeys.mouseLockKeys = {}
 	table.insert(self.boundKeys.mouseLockKeys, self:GetBoundCharsForAction(bindings, "MoveForward"))
@@ -307,8 +307,8 @@ function ActionControls:BindMouseButtons()
 	
 	local bindings = GameLib.GetKeyBindings();
 
-	self.keyUtils:Bind("LimitedActionSet1", 2, 2, 0, true, bindings)
-	self.keyUtils:Bind("DirectionalDash", 2, 2, 1, true, bindings)
+	self.keyUtils:Bind("LimitedActionSet1", 2, 2, 0, 0, true, bindings)
+	self.keyUtils:Bind("DirectionalDash", 2, 2, 0, 1, true, bindings)
 	self.keyUtils:CommitBindings(bindings)
 	
 	self.isMouseBoundToActions = true
