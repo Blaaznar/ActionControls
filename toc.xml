@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Addon Author="Blaaznar" APIVersion="8" Name="ActionControls" Description="Action controls system">
+<Addon Author="Blaaznar" APIVersion="8" Name="ActionControls" Description="">
     <Script Name="ActionControls.lua"/>
     <Form Name="ActionControls.xml"/>
     <Script Name="LibKeyUtils.lua"/>
     <Script Name="LibLuaUtils.lua"/>
-	<Script Name="LibSimpleLog.lua"/>
 </Addon>
