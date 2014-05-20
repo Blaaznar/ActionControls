@@ -1,7 +1,5 @@
 -- Helper functions for key mapping
 
-local KeyUtils = {}
-
 -- Character map for keyPress codes reported by SystemKeyDown event
 local systemKeyMap = { 
 	["Backspace"] = 8, ["Tab"] = 9, ["Shift"] = 16, ["Ctrl"] = 17, 
@@ -62,13 +60,65 @@ local nCodeKeyMap = {
 	[328] = "Up", [331] = "Left", [333] = "Right", [336] = "Down"
 }
 
+local KeyUtils = {}
+
+function KeyUtils:new(logInst)
+    o = {}
+    setmetatable(o, self)
+    self.__index = self 
+
+    -- initialize variables here
+	o.logInst = logInst
+	
+    return o
+end
+
 function KeyUtils:CharToSysKeyCode(char)
 	return systemKeyMap[char]
 end
 
 function KeyUtils:KeybindNCodeToChar(nCode)
-	--Print("KeyUtils:KeybindNCodeToChar(" .. nCode .. ") = " .. tostring(nCodeKeyMap[nCode]))
 	return nCodeKeyMap[nCode]
+end
+
+function KeyUtils:Bind(actionName, index, eDevice, nCode, pBindings)
+	assert(not GameLib.GetPlayerUnit():IsInCombat(), "In combat, changing bindings is not possible at this moment.")
+	assert(index, error("Binding index not provided."))
+	assert(eDevice, error("Binding eDevice not provided."))
+	assert(nCode, error("Binding nCode not provided."))
+	
+	local bindings = pBindings or GameLib.GetKeyBindings();
+	local binding = self:GetBindingByActionName(bindings, actionName)
+
+	binding.arInputs[index].eDevice = eDevice
+	binding.arInputs[index].nCode = nCode
+	
+	GameLib.SetKeyBindings(bindings)
+	
+	self.log:Debug("Bound binding for '" .. actionName .. "' at index " .. index .. ".")
+end
+
+function KeyUtils:Unbind(actionName, index, pBindings)
+	assert(not GameLib.GetPlayerUnit():IsInCombat(), "In combat, changing bindings is not possible at this moment.")
+	
+	local bindings = pBindings or GameLib.GetKeyBindings();
+	local binding = self:GetBindingByActionName(bindings, actionName)
+
+	if index == nil then 
+		for _, i in ipairs(binding.arInputs) do
+			binding.arInputs[i].eDevice = 0
+			binding.arInputs[i].nCode = 0    
+		end		
+
+		self.log:Debug("Unbound binding for '" .. actionName .. "' at index " .. i .. ".")
+	else 
+		binding.arInputs[index].eDevice = 0
+		binding.arInputs[index].nCode = 0
+		
+		self.log:Debug("Unbound binding for '" .. actionName .. "' at index " .. index .. ".")
+	end
+
+	GameLib.SetKeyBindings(bindings)
 end
 
 -- Register Library

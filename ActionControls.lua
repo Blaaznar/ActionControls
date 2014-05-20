@@ -2,9 +2,15 @@
 -- Client Lua Script for ActionControls
 -- Copyright (c) NCsoft. All rights reserved
 -----------------------------------------------------------------------------------------------
-
 require "Window"
 require "GameLib"
+
+-----------------------------------------------------------------------------------------------
+-- Packages
+-----------------------------------------------------------------------------------------------
+local SimpleLog = Apollo.GetPackage("Blaz:Lib:SimpleLog-0.1").tPackage
+local KeyUtils = Apollo.GetPackage("Blaz:Lib:KeyUtils-0.2").tPackage
+local LuaUtils = Apollo.GetPackage("Blaz:Lib:LuaUtils-0.1").tPackage
  
 -----------------------------------------------------------------------------------------------
 -- ActionControls Module Definition
@@ -17,10 +23,6 @@ local ActionControls = {
 -----------------------------------------------------------------------------------------------
 -- Constants
 -----------------------------------------------------------------------------------------------
-local KeyUtils = Apollo.GetPackage("Blaz:Lib:KeyUtils-0.2").tPackage
-local LuaUtils = Apollo.GetPackage("Blaz:Lib:LuaUtils-0.1").tPackage
-local SimpleLog = Apollo.GetPackage("Blaz:Lib:SimpleLog-0.1").tPackage
-
 local EnumMouseLockingType =
 {
 	None = 0,
@@ -31,13 +33,14 @@ local EnumMouseLockingType =
 -----------------------------------------------------------------------------------------------
 -- Initialization
 -----------------------------------------------------------------------------------------------
-function ActionControls:new(logInst)
+function ActionControls:new(logInst, keyUtilsInst)
     o = {}
     setmetatable(o, self)
     self.__index = self 
 
     -- variables
 	o.log = logInst
+	o.keyUtils = keyUtilsInst
 
 	o.playerPrevPosition = nil
 	o.immediateMouseOverUnit = nil
@@ -254,7 +257,7 @@ function ActionControls:OnKeyBindingUpdated()
 end
 
 function ActionControls:ReadKeyBindings()
-	--GameLib.CodeEnumInputAction
+	--GameLib.CodeEnumInputAction.
 	local bindings = GameLib.GetKeyBindings();
 	
 	-- check if LMB is bound to any action
@@ -295,8 +298,8 @@ function ActionControls:GetBoundCharsForAction(bindings, actionName)
 	self.log:Debug("GetBoundCharsForAction(): " .. LuaUtils:DataDumper(binding))
 
 	local boundChars = 	{	
-		[1] = KeyUtils:KeybindNCodeToChar(binding.arInputs[1].nCode),
-		[2] = KeyUtils:KeybindNCodeToChar(binding.arInputs[2].nCode)
+		[1] = self.keyUtils:KeybindNCodeToChar(binding.arInputs[1].nCode),
+		[2] = self.keyUtils:KeybindNCodeToChar(binding.arInputs[2].nCode)
 	}
 	
 	return boundChars
@@ -331,7 +334,7 @@ function ActionControls:BindMouseButtons()
 	lmbBinding.arInputs[2].eDevice = 2
 	lmbBinding.arInputs[2].nCode = 0
 	
-	local rmbBinding = self:GetBindingByActionName(bindings, "LimitedActionSet2")
+	local rmbBinding = self:GetBindingByActionName(bindings, "DirectionalDash")
 	rmbBinding.arInputs[2].eDevice = 2
 	rmbBinding.arInputs[2].nCode = 1
 
@@ -437,7 +440,7 @@ function ActionControls:OnSystemKeyDown(key)
 	end
 
 	-- target locking
-	if key == KeyUtils:CharToSysKeyCode(self.settings.mouseOverTargetLockKey) then
+	if key == self.keyUtils:CharToSysKeyCode(self.settings.mouseOverTargetLockKey) then
 		if GameLib.GetTargetUnit() ~= nil then
 			--self.log:Debug('target lock toggle')
 			self:SetMouseOverTargetLock(not self:GetMouseOverTargetLock())
@@ -449,7 +452,7 @@ function ActionControls:OnSystemKeyDown(key)
 	end
 
 	-- camera lock toggle
-	if key == KeyUtils:CharToSysKeyCode(self.settings.mouseLockKey) then
+	if key == self.keyUtils:CharToSysKeyCode(self.settings.mouseLockKey) then
 		--self.log:Debug("OnSystemKeyDown(" .. key .. ") - Manual toggle")
 		self:ToggleMouseLock()
 		return
@@ -457,7 +460,7 @@ function ActionControls:OnSystemKeyDown(key)
 	
 	-- camera locking
 	if self.settings.mouseLockingType == EnumMouseLockingType.PhisicalMovement 
-		and key == KeyUtils:CharToSysKeyCode("Esc")
+		and key == self.keyUtils:CharToSysKeyCode("Esc")
 	then 
 		self.log:Debug("OnSystemKeyDown(" .. key .. ") - ESC pressed, turning on movement timer")
 		-- ESC directly executes GameLib.SetMouseLock(false), but that doesn't set the movement timer to on
@@ -465,8 +468,8 @@ function ActionControls:OnSystemKeyDown(key)
 		return
 	elseif self.settings.mouseLockingType == EnumMouseLockingType.MovementKeys then
 		for _,keys in ipairs(self.boundKeys.mouseLockKeys) do
-			if key == KeyUtils:CharToSysKeyCode(keys[1]) 
-			or key == KeyUtils:CharToSysKeyCode(keys[2]) then
+			if key == self.keyUtils:CharToSysKeyCode(keys[1]) 
+			or key == self.keyUtils:CharToSysKeyCode(keys[2]) then
 				self.log:Debug("OnSystemKeyDown(" .. key .. ") - Manual movement lock")
 				self:SetMouseLock(true)
 				return
@@ -692,7 +695,7 @@ function ActionControls:IsKeyAlreadyBound(key)
 			return binding.strAction ~= "ExplicitMouseLook" and
 				table.ExistsItem(binding.arInputs, 
 				function (arInput) 
-					return (arInput.eDevice == 1 and KeyUtils:KeybindNCodeToChar(arInput.nCode) == key)
+					return (arInput.eDevice == 1 and self.keyUtils:KeybindNCodeToChar(arInput.nCode) == key)
 				end) 
 		end)
 		
@@ -708,7 +711,7 @@ function ActionControls:OptionsProcessKey(wndControl, strKeyName, nScanCode)
 		return nil
 	end
 	
-	return KeyUtils:KeybindNCodeToChar(nScanCode)
+	return self.keyUtils:KeybindNCodeToChar(nScanCode)
 end
 
 function ActionControls:OptionsBeginBinding(wndControl)
@@ -761,9 +764,11 @@ end
 -----------------------------------------------------------------------------------------------
 -- ActionControls Instance
 -----------------------------------------------------------------------------------------------
-local LogInst = SimpleLog:new()
-local ActionControlsInst = ActionControls:new(LogInst) -- dependency injection
+local logInst = SimpleLog:new()
+local keyUtilsInst = KeyUtils:new(logInst)
 
-ActionControlsInst:Init()
+local actionControlsInst = ActionControls:new(logInst, keyUtilsInst) -- dependency injection
+
+actionControlsInst:Init()
 
 
