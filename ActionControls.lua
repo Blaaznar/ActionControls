@@ -26,8 +26,7 @@ local ActionControls = {
 local EnumMouseLockingType =
 {
 	None = 0,
-	MovementKeys = 1,
-    PhysicalMovement = 2
+	MovementKeys = 1
 }
 
 -----------------------------------------------------------------------------------------------
@@ -174,10 +173,6 @@ function ActionControls:OnDocLoaded()
 		Apollo.RegisterEventHandler("GameClickSky", "OnGameClickWorld", self)
 		Apollo.RegisterEventHandler("GameClickUnit", "OnGameClickWorld", self)
 		Apollo.RegisterEventHandler("GameClickProp", "OnGameClickWorld", self)
-		
-		Apollo.RegisterTimerHandler("DetectMovementTimer", "OnDetectMovementTimer", self)
-		Apollo.CreateTimer("DetectMovementTimer", 0.05, false)
-		Apollo.StopTimer("DetectMovementTimer")
 		
 		-- Targeting
 		Apollo.RegisterEventHandler("MouseOverUnitChanged", "OnMouseOverUnitChanged", self)
@@ -351,12 +346,6 @@ function ActionControls:InitializeDetection(lockState)
 	if lockState == nil then lockState = GameLib.IsMouseLockOn() end
 	
 	self.playerPrevPosition = nil
-	
-	if lockState then
-		Apollo.StopTimer("DetectMovementTimer")
-	elseif self.settings.mouseLockingType == EnumMouseLockingType.PhysicalMovement then
-		Apollo.StartTimer("DetectMovementTimer")
-	end
 end
 
 function ActionControls:ToggleMouseLock()
@@ -442,14 +431,7 @@ function ActionControls:OnSystemKeyDown(key)
 	end
 	
 	-- camera locking
-	if self.settings.mouseLockingType == EnumMouseLockingType.PhysicalMovement 
-		and key == self.keyUtils:CharToSysKeyCode("Esc")
-	then 
-		self.log:Debug("OnSystemKeyDown(" .. key .. ") - ESC pressed, turning on movement timer")
-		-- ESC directly executes GameLib.SetMouseLock(false), but that doesn't set the movement timer to on
-		Apollo.StartTimer("DetectMovementTimer")
-		return
-	elseif self.settings.mouseLockingType == EnumMouseLockingType.MovementKeys then
+	if self.settings.mouseLockingType == EnumMouseLockingType.MovementKeys then
 		for _,keys in ipairs(self.boundKeys.mouseLockTriggerKeys) do
 			if key == self.keyUtils:CharToSysKeyCode(keys[1]) 
 			or key == self.keyUtils:CharToSysKeyCode(keys[2]) then
@@ -459,44 +441,6 @@ function ActionControls:OnSystemKeyDown(key)
 			end
 		end
 	end
-end
-
--------------------------------------------------------------------------------
--- Positional locking (physical movement) - Thanks to Casstiel from Steer addon
--------------------------------------------------------------------------------
-function ActionControls:OnDetectMovementTimer()
-	local position = self:GetPlayerPosition()
-	local prevPosition = self.playerPrevPosition
-	self.playerPrevPosition = position
-
-	if not GameLib.IsMouseLockOn() and ActionControls:IsPlayerPositionChanged(position, prevPosition) then
-		self.log:Debug("OnDetectMovementTimer() - moving induced lock")
-		self:SetMouseLock(true)
-	elseif self.settings.mouseLockingType == EnumMouseLockingType.PhysicalMovement then
-		Apollo.StartTimer("DetectMovementTimer")
-	end
-end
-
-function ActionControls:GetPlayerPosition()
-	local playerUnit = GameLib.GetPlayerUnit()
-	
-	if playerUnit == nil or not playerUnit:IsValid() then
-		return nil
-	end
-	
-	return playerUnit:GetPosition()
-end
-
-function ActionControls:IsPlayerPositionChanged(currentPosition, prevPosition)
-	if currentPosition == nil or prevPosition == nil then
-		return false
-	end
-
-	local delta = 0.1
-	
-	return not (math.abs(prevPosition.x-currentPosition.x) < delta and 
-				math.abs(prevPosition.y-currentPosition.y) < delta and 
-				math.abs(prevPosition.z-currentPosition.z) < delta)
 end
 
 --------------------------------------------------------------------------
@@ -524,6 +468,7 @@ function ActionControls:OnMouseOverUnitChanged(unit)
 	end
 end
 
+-- Delayed targeting
 function ActionControls:OnDelayedMouseOverTargetTimer(strVar, nValue)
 	if GameLib.IsMouseLockOn() 
 	    and self.immediateMouseOverUnit ~= nil 
@@ -538,6 +483,7 @@ function ActionControls:SetTarget(unit)
 	GameLib.SetTargetUnit(unit)
 end
 
+-- Preserves previous target information (clicking on game world to unlock the camera deselects the current target)
 function ActionControls:SetLastTarget(unit)
 	if unit == nil then 
 		unit = GameLib.GetTargetUnit() 
@@ -546,7 +492,9 @@ function ActionControls:SetLastTarget(unit)
  	self.lastTargetUnit = unit
 end
 
+-----------------------------------------------------------------------------------------------
 -- Target locking
+-----------------------------------------------------------------------------------------------
 function ActionControls:GetMouseOverTargetLock(lockState)
 	if GameLib.GetTargetUnit() == nil then
 		return false;
@@ -565,18 +513,22 @@ function ActionControls:SetMouseOverTargetLock(lockState)
 		return
 	end
 	
+	self:DisplayLockState(lockState)
+	
+	self.isMouseOverTargetLocked = lockState
+end
+
+function ActionControls:DisplayLockState(lockState)
 	-- TODO: Visual representation of target lock on target unit frame (i.e. lock icon or outline)
 	if lockState then
 		self.log:Info("MouseOver target lock set on '" .. GameLib.GetTargetUnit():GetName() .. "'.")
 	else
 		self.log:Info("Removed target lock from '" .. GameLib.GetTargetUnit():GetName() .. "'.")
 	end
-	
-	self.isMouseOverTargetLocked = lockState
 end
 
 -----------------------------------------------------------------------------------------------
--- ActionControlsForm Functions
+-- Options window functions
 -----------------------------------------------------------------------------------------------
 function ActionControls:OnShowOptionWindow()
 	self:SetMouseLock(false)
@@ -630,7 +582,7 @@ function ActionControls:OnUnBindMouseButtonsSignal( wndHandler, wndControl, eMou
 end
 
 function ActionControls:OnBindButtonSignal( wndHandler, wndControl, eMouseButton )
-	self:OptionsBeginBinding(wndControl)
+	self:SetBeginBindingState(wndControl)
 end
 
 function ActionControls:OnBtnCameraLockKey_WindowKeyDown(wndHandler, wndControl, strKeyName, nScanCode, nMetakeys)
@@ -640,7 +592,7 @@ function ActionControls:OnBtnCameraLockKey_WindowKeyDown(wndHandler, wndControl,
 		self.frmOptions.mouseLockToggleKey.nCode = nScanCode
 	end		
 
-	self:OptionsEndBinding(wndControl)
+	self:SetEndBindingState(wndControl)
 end
 
 function ActionControls:BtnTargetLockKey_WindowKeyDown( wndHandler, wndControl, strKeyName, nScanCode, nMetakeys )
@@ -648,7 +600,7 @@ function ActionControls:BtnTargetLockKey_WindowKeyDown( wndHandler, wndControl, 
 		self.userSettings.mouseOverTargetLockKey = key
 	end
 	
-	self:OptionsEndBinding(wndControl)
+	self:SetEndBindingState(wndControl)
 end
 
 function ActionControls:IsKeyAlreadyBound(eDevice, eModifier, nCode)
@@ -673,12 +625,12 @@ function ActionControls:IsKeyAlreadyBound(eDevice, eModifier, nCode)
 	end
 end
 
-function ActionControls:OptionsBeginBinding(wndControl)
+function ActionControls:SetBeginBindingState(wndControl)
 	wndControl:SetCheck(true)
 	wndControl:SetFocus()
 end
 
-function ActionControls:OptionsEndBinding(wndControl)
+function ActionControls:SetEndBindingState(wndControl)
 	wndControl:SetCheck(false)
 	wndControl:ClearFocus()
 	self:OptionWindowPopulateForm()
@@ -738,7 +690,7 @@ end
 local logInst = SimpleLog:new()
 local keyUtilsInst = KeyUtils:new(logInst)
 
-local actionControlsInst = ActionControls:new(logInst, keyUtilsInst) -- dependency injection
+local actionControlsInst = ActionControls:new(logInst, keyUtilsInst)
 
 actionControlsInst:Init()
 
