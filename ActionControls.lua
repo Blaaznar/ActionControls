@@ -27,7 +27,7 @@ local EnumMouseLockingType =
 {
 	None = 0,
 	MovementKeys = 1,
-    PhisicalMovement = 2
+    PhysicalMovement = 2
 }
 
 -----------------------------------------------------------------------------------------------
@@ -46,13 +46,14 @@ function ActionControls:new(logInst, keyUtilsInst)
 	o.immediateMouseOverUnit = nil
 	o.lastTargetUnit = nil
 	o.isMouseOverTargetLocked = false
-	o.isMouseBoundToActions = false
+	o.isMouseLmbBound = false
+	o.isMouseRmbBound = false
 	o.boundKeys = {}
-	o.boundKeys.mouseLockKeys = {}
+	o.boundKeys.mouseLockToggleKeys = {}
+	o.boundKeys.mouseLockTriggerKeys = {}
 
 	o.settings = {
 		mouseLockingType = EnumMouseLockingType.MovementKeys,
-		mouseLockKey = nil,
 		mouseOverTargetLockKey = nil
 	}
 	
@@ -260,10 +261,16 @@ function ActionControls:ReadKeyBindings()
 	--GameLib.CodeEnumInputAction.
 	local bindings = GameLib.GetKeyBindings();
 	
-	-- check if LMB is bound to any action
-	self.isMouseBoundToActions = self.keyUtils:IsBound(2, 0, 0, bindings)
+	-- check if mouse buttons are bound to any action
+	self.isMouseLmbBound = self.keyUtils:IsBound(2, 0, 0, bindings)
+	self.isMouseRmbBound = self.keyUtils:IsBound(2, 0, 1, bindings)
 	
-	self.boundKeys.mouseLockKeys = {
+	self.boundKeys.mouseLockToggleKeys = {
+		self:GetBoundCharsForAction(bindings, "ExplicitMouseLook")
+	}
+	
+	-- TODO: Pass a table with action names and get them all in one go
+	self.boundKeys.mouseLockTriggerKeys = {
 		self:GetBoundCharsForAction(bindings, "MoveForward"),
 		self:GetBoundCharsForAction(bindings, "DashForward"),
 		self:GetBoundCharsForAction(bindings, "MoveBackward"),
@@ -308,11 +315,11 @@ function ActionControls:BindMouseButtons()
 	
 	local bindings = GameLib.GetKeyBindings();
 
-	self.keyUtils:Bind("LimitedActionSet1", 2, 2, 0, 0, true, bindings)
+	self.keyUtils:Bind("LimitedActionSet1", 2, 2, 0, 1, true, bindings)
 	self.keyUtils:Bind("DirectionalDash", 2, 2, 0, 1, true, bindings)
 	self.keyUtils:CommitBindings(bindings)
 	
-	self.isMouseBoundToActions = true
+	self.isMouseLmbBound = true
 	
 	self.log:Debug("Left and right mouse buttons bound to 'Action 1' and 'Directional dash'.")
 end
@@ -329,7 +336,7 @@ function ActionControls:UnbindMouseButtons()
 	self.keyUtils:Unbind("DirectionalDash", 2, bindings)
 	self.keyUtils:CommitBindings(bindings)
 	
-	self.isMouseBoundToActions = false	
+	self.isMouseLmbBound = false	
 	
 	self.log:Debug("Left and right mouse buttons unbound from 'Action 1' and 'Directional dash'.")
 end
@@ -344,10 +351,8 @@ function ActionControls:InitializeDetection(lockState)
 	
 	if lockState then
 		Apollo.StopTimer("DetectMovementTimer")
-		--self.log:Debug('timer stopped')
-	elseif self.settings.mouseLockingType == EnumMouseLockingType.PhisicalMovement then
+	elseif self.settings.mouseLockingType == EnumMouseLockingType.PhysicalMovement then
 		Apollo.StartTimer("DetectMovementTimer")
-		--self.log:Debug('timer started')
 	end
 end
 
@@ -379,7 +384,7 @@ function ActionControls:OnGameClickWorld(tPos)
 	if GameLib.IsMouseLockOn() then
 		GameLib.SetTargetUnit(self.lastTargetUnit)
 		
-		if not self.isMouseBoundToActions then
+		if not self.isMouseLmbBound then
 			self:SetMouseLock(false)
 		end
 	end
@@ -396,10 +401,16 @@ end
 -------------------------------------------------------------------------------
 function ActionControls:OnSystemKeyDown(key)
 	--self.log:Debug("OnSystemKeyDown(" .. key .. ")")
+
+	-- modifiers not supported yet
+	if Apollo.IsShiftKeyDown() or Apollo.IsAltKeyDown() or Apollo.IsControlKeyDown() then
+		return
+	end
+
 	-- stop processing keys if configuration or keybind windows are open
-	local keybindForm = Apollo.FindWindowByName("KeybindForm")
+	--local keybindForm = Apollo.FindWindowByName("KeybindForm")	
 	if (self.wndMain ~= nil and self.wndMain:IsVisible()) 
-		or (keybindForm ~= nil and keybindForm:IsVisible())
+		--or (keybindForm ~= nil and keybindForm:IsVisible())
 	then
 		self:SetMouseLock(false)
 		return
@@ -418,14 +429,17 @@ function ActionControls:OnSystemKeyDown(key)
 	end
 
 	-- camera lock toggle
-	if key == self.keyUtils:CharToSysKeyCode(self.settings.mouseLockKey) then
-		--self.log:Debug("OnSystemKeyDown(" .. key .. ") - Manual toggle")
-		self:ToggleMouseLock()
-		return
+	for _,keys in ipairs(self.boundKeys.mouseLockToggleKeys) do
+		if key == self.keyUtils:CharToSysKeyCode(keys[1]) 
+		or key == self.keyUtils:CharToSysKeyCode(keys[2]) then
+			self.log:Debug("OnSystemKeyDown(" .. key .. ") - Manual toggle")
+			self:ToggleMouseLock()
+			return
+		end
 	end
 	
 	-- camera locking
-	if self.settings.mouseLockingType == EnumMouseLockingType.PhisicalMovement 
+	if self.settings.mouseLockingType == EnumMouseLockingType.PhysicalMovement 
 		and key == self.keyUtils:CharToSysKeyCode("Esc")
 	then 
 		self.log:Debug("OnSystemKeyDown(" .. key .. ") - ESC pressed, turning on movement timer")
@@ -433,7 +447,7 @@ function ActionControls:OnSystemKeyDown(key)
 		Apollo.StartTimer("DetectMovementTimer")
 		return
 	elseif self.settings.mouseLockingType == EnumMouseLockingType.MovementKeys then
-		for _,keys in ipairs(self.boundKeys.mouseLockKeys) do
+		for _,keys in ipairs(self.boundKeys.mouseLockTriggerKeys) do
 			if key == self.keyUtils:CharToSysKeyCode(keys[1]) 
 			or key == self.keyUtils:CharToSysKeyCode(keys[2]) then
 				self.log:Debug("OnSystemKeyDown(" .. key .. ") - Manual movement lock")
@@ -455,7 +469,7 @@ function ActionControls:OnDetectMovementTimer()
 	if not GameLib.IsMouseLockOn() and ActionControls:IsPlayerPositionChanged(position, prevPosition) then
 		self.log:Debug("OnDetectMovementTimer() - moving induced lock")
 		self:SetMouseLock(true)
-	elseif self.settings.mouseLockingType == EnumMouseLockingType.PhisicalMovement then
+	elseif self.settings.mouseLockingType == EnumMouseLockingType.PhysicalMovement then
 		Apollo.StartTimer("DetectMovementTimer")
 	end
 end
@@ -574,21 +588,19 @@ function ActionControls:OnShowOptionWindow()
 end
 
 function ActionControls:OptionWindowPopulateForm()
-	self.isMouseBoundToActionsOption = self.isMouseBoundToActions
+	self.isMouseLmbBoundOption = self.isMouseLmbBound
 	
 	self.wndMain:FindChild("RbKeyLocking"):SetCheck(self.userSettings.mouseLockingType == EnumMouseLockingType.MovementKeys)
-	self.wndMain:FindChild("RbPositionLocking"):SetCheck(self.userSettings.mouseLockingType == EnumMouseLockingType.PhisicalMovement)
-	self.wndMain:FindChild("RbDisabledLocking"):SetCheck(self.userSettings.mouseLockingType == EnumMouseLockingType.None)
 
-	self.wndMain:FindChild("BtnCameraLockKey"):SetText(tostring(self.userSettings.mouseLockKey))		
+	self.wndMain:FindChild("BtnCameraLockKey"):SetText(tostring(boundKeys.mouseLockToggleKeys[1][1]))		
 	self.wndMain:FindChild("BtnTargetLockKey"):SetText(tostring(self.userSettings.mouseOverTargetLockKey))
 	
-	self:SetMouseBindButtonsState()
+	self:SetMouseLmbBindButtonsState()
 end
 
-function ActionControls:SetMouseBindButtonsState()
-	self.wndMain:FindChild("BindMouseButtons"):Enable(not self.isMouseBoundToActionsOption)
-	self.wndMain:FindChild("UnBindMouseButtons"):Enable(self.isMouseBoundToActionsOption)
+function ActionControls:SetMouseLmbBindButtonsState()
+	self.wndMain:FindChild("BindMouseButtons"):Enable(not self.isMouseLmbBoundOption)
+	self.wndMain:FindChild("UnBindMouseButtons"):Enable(self.isMouseLmbBoundOption)
 end
 
 function ActionControls:OnRbKeyLockingCheck( wndHandler, wndControl, eMouseButton )
@@ -596,13 +608,8 @@ function ActionControls:OnRbKeyLockingCheck( wndHandler, wndControl, eMouseButto
 	self.userSettings.mouseLockingType = EnumMouseLockingType.MovementKeys
 end
 
-function ActionControls:OnRbPositionLockingCheck( wndHandler, wndControl, eMouseButton )
-	self.log:Debug("OnPositionLockingChkButtonCheck")
-	self.userSettings.mouseLockingType = EnumMouseLockingType.PhisicalMovement
-end
-
-function ActionControls:OnRbDisabledLockingCheck( wndHandler, wndControl, eMouseButton )
-	self.log:Debug("OnRbPositionLockingCheck")
+function ActionControls:OnRbKeyLockingUncheck( wndHandler, wndControl, eMouseButton )
+	self.log:Debug("OnKeyLockingChkButtonUncheck")
 	self.userSettings.mouseLockingType = EnumMouseLockingType.None
 end
 
@@ -610,12 +617,12 @@ end
 function ActionControls:OnBindMouseButtonsSignal( wndHandler, wndControl, eMouseButton )
 	self.log:Debug("OnBindMouseButtonsSignal")
 	
-	self.isMouseBoundToActionsOption = true
+	self.isMouseLmbBoundOption = true
 	self:SetMouseBindButtonsState()
 end
 
 function ActionControls:OnUnBindMouseButtonsSignal( wndHandler, wndControl, eMouseButton )
-	self.isMouseBoundToActionsOption = false
+	self.isMouseLmbBoundOption = false
 	self:SetMouseBindButtonsState()
 end
 
@@ -693,13 +700,13 @@ end
 
 -- when the OK button is clicked
 function ActionControls:OnOK()
-	if self.isMouseBoundToActionsOption ~= self.isMouseBoundToActions then
+	if self.isMouseLmbBoundOption ~= self.isMouseLmbBound then
 		if GameLib.GetPlayerUnit():IsInCombat() then
 			self.log:Warn("In combat, changing bindings is not possible at this moment.")
 			return
 		end
 	
-		if self.isMouseBoundToActionsOption then
+		if self.isMouseLmbBoundOption then
 			self:BindMouseButtons()
 		else
 			self:UnbindMouseButtons()
