@@ -153,7 +153,9 @@ function KeyUtils:IsBound(eDevice, eModifier, nCode, pBindings)
 		function (binding)
 			return table.ExistsItem(binding.arInputs, 
 				function (arInput) 
-					return arInput.eDevice == eDevice and arInput.nCode == nCode
+					return 
+						arInput.eDevice == eDevice and arInput.nCode == nCode, 
+						binding
 				end) 
 		end)
 end

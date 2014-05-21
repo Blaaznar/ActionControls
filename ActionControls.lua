@@ -57,6 +57,9 @@ function ActionControls:new(logInst, keyUtilsInst)
 		mouseOverTargetLockKey = nil
 	}
 	
+	o.frmOptions = {}
+	o.frmOptions.mouseLockToggleKey = nil
+	
     return o
 end
 
@@ -631,60 +634,43 @@ function ActionControls:OnBindButtonSignal( wndHandler, wndControl, eMouseButton
 end
 
 function ActionControls:OnBtnCameraLockKey_WindowKeyDown(wndHandler, wndControl, strKeyName, nScanCode, nMetakeys)
-	local key = self:OptionsProcessKey(wndHandler, strKeyName, nScanCode)
-	self.log:Debug("Camera lock key: " .. tostring(key))
-	
-	if (not self:IsKeyAlreadyBound(key)) then
-		self.userSettings.mouseLockKey = key
+	if (not self:IsKeyAlreadyBound(1, 0, nScanCode)) then
+		self.frmOptions.mouseLockToggleKey.eDevice = 1
+		self.frmOptions.mouseLockToggleKey.eModifier = 0
+		self.frmOptions.mouseLockToggleKey.nCode = nScanCode
 	end		
 
 	self:OptionsEndBinding(wndControl)
 end
 
 function ActionControls:BtnTargetLockKey_WindowKeyDown( wndHandler, wndControl, strKeyName, nScanCode, nMetakeys )
-	local key = self:OptionsProcessKey(wndHandler, strKeyName, nScanCode)
-	self.log:Debug("Target lock key: " .. tostring(key))
-
-	if (not self:IsKeyAlreadyBound(key)) then
+	if (not self:IsKeyAlreadyBound(1, 0, nScanCode)) then
 		self.userSettings.mouseOverTargetLockKey = key
 	end
 	
 	self:OptionsEndBinding(wndControl)
 end
 
-function ActionControls:IsKeyAlreadyBound(key)
-	if key == nil then return false end
-	
-	if self.userSettings.mouseOverTargetLockKey == key
-		or self.userSettings.mouseLockKey == key
-	then
-		return true
-	end
-	
-	local bindings = GameLib.GetKeyBindings();
-	
-	local existingBinding = table.FindItem(bindings, 
-		function (binding)
-			return binding.strAction ~= "ExplicitMouseLook" and
-				table.ExistsItem(binding.arInputs, 
-				function (arInput) 
-					return (arInput.eDevice == 1 and self.keyUtils:KeybindNCodeToChar(arInput.nCode) == key)
-				end) 
-		end)
-		
-	if existingBinding ~= nil then
-		self.log:Info("Key '" .. tostring(key) .. "' is already bound to '" .. tostring(existingBinding.strActionLocalized) .. "'")
-
-		return true
-	end
-end
-
-function ActionControls:OptionsProcessKey(wndControl, strKeyName, nScanCode)
+function ActionControls:IsKeyAlreadyBound(eDevice, eModifier, nCode)
+	local key = self.keyUtils:KeybindNCodeToChar(nScanCode)
 	if strKeyName == "Esc" then
-		return nil
+		return true
 	end
 	
-	return self.keyUtils:KeybindNCodeToChar(nScanCode)
+	if key == nil then return false end -- ????????????????
+	
+	if self.userSettings.mouseOverTargetLockKey == key then
+		return true
+	end
+	
+	local isBound, existingBinding = self.keyUtils:IsBound(eDevice, eModifier, nCode)
+
+	if isBound then
+		self.log:Info("Key '" .. tostring(key) .. "' is already bound to '" .. tostring(existingBinding.strActionLocalized) .. "'")
+		return 
+			true,
+			existingBinding
+	end
 end
 
 function ActionControls:OptionsBeginBinding(wndControl)
@@ -710,6 +696,18 @@ function ActionControls:OnOK()
 			self:BindMouseButtons()
 		else
 			self:UnbindMouseButtons()
+		end
+		
+		if self.frmOptions.mouseLockToggleKey ~= nil then
+			local key = self.frmOptions.mouseLockToggleKey
+			self.keyUtils:Bind("ExplicitMouseLook", 
+				1, 
+				key.eDevice, 
+				key.eModifier, 
+				key.nCode, 
+				true)
+				
+			self.frmOptions.mouseLockToggleKey = nil
 		end
 	end
 	
