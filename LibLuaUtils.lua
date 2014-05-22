@@ -33,6 +33,13 @@ function table.ShallowMerge(table1, intoTable2)
 	end
 end
 
+function try(f, catch_f)
+ local status, exception = pcall(f)
+ if not status and catch_f ~= nil then
+ 	catch_f(exception)
+ end
+end
+
 -------------------------------------------------------------------------------
 -- Other 3rd party utils
 -------------------------------------------------------------------------------

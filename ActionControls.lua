@@ -11,14 +11,6 @@ require "GameLib"
 local KeyUtils = Apollo.GetPackage("Blaz:Lib:KeyUtils-0.2").tPackage
 local LuaUtils = Apollo.GetPackage("Blaz:Lib:LuaUtils-0.1").tPackage
 local SimpleLog = Apollo.GetPackage("Blaz:Lib:SimpleLog-0.1").tPackage
- 
------------------------------------------------------------------------------------------------
--- ActionControls Module Definition
------------------------------------------------------------------------------------------------
-local ActionControls = {
-	_VERSION = '0.0.17',
-	_URL     = 'http://www.curse.com/ws-addons/wildstar/220537-actioncontrols',
-	_DESCRIPTION = 'Action control system for Wildstar'} 
 
 -----------------------------------------------------------------------------------------------
 -- Constants
@@ -28,6 +20,11 @@ local EnumMouseLockingType =
 	None = 0,
 	MovementKeys = 1
 }
+ 
+-----------------------------------------------------------------------------------------------
+-- ActionControls Module Definition
+-----------------------------------------------------------------------------------------------
+local ActionControls = {} 
 
 -----------------------------------------------------------------------------------------------
 -- Initialization
@@ -210,16 +207,15 @@ function ActionControls:OnRestore(eType, t)
 end
 
 function ActionControls:RestoreUserSettings(t)
-	local status, inspectCallResult = pcall(
-	function ()
-		local settings = table.ShallowCopy(self.settings)
-		table.ShallowMerge(t, settings)
-		-- TODO: validate settings
-		self.settings = settings
-	end)
-	if not status then
-		self.log:Error("Error while loading user settings. Default values will be used.")
-	end
+	try(function ()
+			local settings = table.ShallowCopy(self.settings)
+			table.ShallowMerge(t, settings)
+			-- TODO: validate settings
+			self.settings = settings
+		end,
+		function (e)
+			self.log:Error("Error while loading user settings. Default values will be used.")
+		end)
 end
 
 -----------------------------------------------------------------------------------------------
@@ -530,7 +526,7 @@ function ActionControls:OnShowOptionWindow()
 	self:ReadKeyBindings()
 	self.userSettings = table.ShallowCopy(self.settings)
 	
-	-- get existing binding here... TODO:
+	-- TODO: get existing binding here... 
 	self.frmOptions.mouseLockToggleKey = {}
 
 	self:OptionWindowPopulateForm()
@@ -620,16 +616,22 @@ function ActionControls:IsKeyAlreadyBound(eDevice, eModifier, nCode)
 		return true
 	end
 
-	local isBound = self.keyUtils:IsBound(eDevice, eModifier, nCode)
-
-	if isBound then
-		local existingBinding = self.keyUtils:GetBinding(eDevice, eModifier, nCode)
-		--slef.log:Info("Key '" .. tostring(key) .. "' is already bound.")
-		self.log:Info("Key '" .. tostring(key) .. "' is already bound to '" .. tostring(existingBinding.strActionLocalized) .. "'")
-		return 
-			true,
-			existingBinding
-	end
+	try(function ()
+			local isBound = self.keyUtils:IsBound(eDevice, eModifier, nCode)
+			if isBound then
+				local existingBinding = self.keyUtils:GetBinding(eDevice, eModifier, nCode)
+				--slef.log:Info("Key '" .. tostring(key) .. "' is already bound.")
+				self.log:Info("Key '" .. tostring(key) .. "' is already bound to '" .. tostring(existingBinding.strActionLocalized) .. "'")
+				return 
+					true,
+					existingBinding
+			end
+		end,
+		function (e)
+			self.log:Error(e)
+		end)
+	
+	return false
 end
 
 function ActionControls:SetBeginBindingState(wndControl)
