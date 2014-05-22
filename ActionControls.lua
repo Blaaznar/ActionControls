@@ -63,7 +63,7 @@ function ActionControls:Init()
 	self.log:SetLogLevel(3)
 
 	local bHasConfigureFunction = true
-	local strConfigureButtonText = "Configure ActionControls"
+	local strConfigureButtonText = "Action Controls"
 	local tDependencies = {
 		"Blaz:Lib:KeyUtils-0.2",
 		"Blaz:Lib:LuaUtils-0.1",
