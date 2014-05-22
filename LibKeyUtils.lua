@@ -109,6 +109,7 @@ function KeyUtils:Bind(actionName, index, eDevice, eModifier, nCode, unbindConfl
 end
 
 function KeyUtils:Unbind(actionName, index, pBindings)
+	local shouldCommit = pBindings == nil
 	local bindings = pBindings or GameLib.GetKeyBindings();
 	local binding = self:GetBindingByActionName(bindings, actionName)
 
@@ -125,10 +126,16 @@ function KeyUtils:Unbind(actionName, index, pBindings)
 		
 		self.log:Info("Unbound binding for '" .. actionName .. "' at index " .. index .. ".")
 	end
+	
+	if shouldCommit then
+		CommitBindings(bindings)
+	end
 end
 
 function KeyUtils:UnbindByInput(eDevice, eModifier, nCode, pBindings)
+	local shouldCommit = pBindings == nil
 	local bindings = pBindings or GameLib.GetKeyBindings();
+	
 	for _, binding in ipairs(bindings) do
 		for _, arInput in ipairs(binding.arInputs) do
 			if arInput.eDevice == eDevice and arInput.nCode == nCode then
@@ -137,6 +144,10 @@ function KeyUtils:UnbindByInput(eDevice, eModifier, nCode, pBindings)
 				self.log:Info("Unbound " .. self:GetInputKeyName(eDevice, nCode) .. " from '" .. binding.strAction .. "'.")
 			end
 		end
+	end
+	
+	if shouldCommit then
+		CommitBindings(bindings)
 	end
 end
 
@@ -162,11 +173,15 @@ function KeyUtils:IsBound(eDevice, eModifier, nCode, pBindings)
 		end)
 end
 
-function KeyUtils:GetBinding(eDevice, eModifier, nCode)
+function KeyUtils:GetBinding(eDevice, eModifier, nCode, bindings)
+	local bindings = pBindings or GameLib.GetKeyBindings();
+	
 	return table.FindItem(bindings, function(a) return a.eDevice == eDevice and a.eModifier == eModifier and a.nCode == nCode end)
 end
 
-function KeyUtils:GetBindingByActionName(bindings, actionName)
+function KeyUtils:GetBindingByActionName(actionName, bindings)
+	local bindings = pBindings or GameLib.GetKeyBindings();
+	
 	return table.FindItem(bindings, function(a) return a.strAction == actionName end)
 end
 

@@ -33,11 +33,16 @@ function table.ShallowMerge(table1, intoTable2)
 	end
 end
 
-function try(f, catch_f)
- local status, exception = pcall(f)
- if not status and catch_f ~= nil then
- 	catch_f(exception)
- end
+-- try/catch function definition
+function try(tryFunction, catchFunction)
+    local pack = function (...) return arg end
+    local pcallResults = pack(pcall(tryFunction))
+    if not pcallResults[1] and catchFunction ~= nil then
+        catchFunction(pcallResults[2])
+    else
+        table.remove(pcallResults, 1)
+        return unpack(pcallResults)
+    end
 end
 
 -------------------------------------------------------------------------------

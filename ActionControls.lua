@@ -53,8 +53,7 @@ function ActionControls:new(logInst, keyUtilsInst)
 		mouseOverTargetLockKey = nil
 	}
 	
-	o.frmOptions = {}
-	o.frmOptions.mouseLockToggleKey = {}
+	o.model = {}
 	
     return o
 end
@@ -278,10 +277,12 @@ function ActionControls:ReadKeyBindings()
 		self:GetBoundCharsForAction(bindings, "Jump"),
 		self:GetBoundCharsForAction(bindings, "ToggleAutoRun")
 	}
+	
+	return bindings
 end
 
 function ActionControls:GetBoundCharsForAction(bindings, actionName)
-	local binding = self.keyUtils:GetBindingByActionName(bindings, actionName)
+	local binding = self.keyUtils:GetBindingByActionName(actionName, bindings)
 
 	if binding == nil then
 		self.log:Debug("GetBoundCharsForAction(...) - no suitable bindings found for '" .. actionName .. "'")
@@ -299,34 +300,6 @@ function ActionControls:GetBoundCharsForAction(bindings, actionName)
 	}
 	
 	return boundChars
-end
-
-function ActionControls:BindMouseButtons(bindings)
-	if GameLib.GetPlayerUnit():IsInCombat() then
-		self.log:Warn("In combat, changing bindings is not possible at this moment.")
-		return
-	end
-	
-	self.keyUtils:Bind("LimitedActionSet1", 2, 2, 0, 0, true, bindings)
-	self.keyUtils:Bind("DirectionalDash", 2, 2, 0, 1, true, bindings)
-	
-	self.isMouseLmbBound = true
-	
-	self.log:Debug("Left and right mouse buttons bound to 'Action 1' and 'Directional dash'.")
-end
-
-function ActionControls:UnbindMouseButtons(bindings)
-	if GameLib.GetPlayerUnit():IsInCombat() then
-		self.log:Warn("In combat, changing bindings is not possible at this moment.")
-		return
-	end
-	
-	self.keyUtils:UnbindByInput(2, 0, 0, bindings) -- LMB
-	self.keyUtils:UnbindByInput(2, 0, 1, bindings) -- RMB
-	
-	self.isMouseLmbBound = false	
-	
-	self.log:Debug("Left and right mouse buttons unbound from 'Action 1' and 'Directional dash'.")
 end
 
 -----------------------------------------------------------------------------------------------
@@ -522,62 +495,82 @@ end
 -----------------------------------------------------------------------------------------------
 function ActionControls:OnShowOptionWindow()
 	self:SetMouseLock(false)
-	
-	self:ReadKeyBindings()
-	self.userSettings = table.ShallowCopy(self.settings)
-	
-	-- TODO: get existing binding here... 
-	self.frmOptions.mouseLockToggleKey = {}
 
-	self:OptionWindowPopulateForm()
+	self:GenerateModel()
+	self:GenerateView()
+
+	GameLib.PauseGameActionInput(true)
 	
 	self.wndMain:Invoke() -- show the window
-	GameLib.PauseGameActionInput(true)
 end
 
-function ActionControls:OptionWindowPopulateForm()
-	self.isMouseLmbBoundOption = self.isMouseLmbBound
+function ActionControls:GenerateModel()
+	local bindings = self:ReadKeyBindings()
 	
-	self.wndMain:FindChild("RbKeyLocking"):SetCheck(self.userSettings.mouseLockingType == EnumMouseLockingType.MovementKeys)
+	self.model = {}
+	self.model.settings = table.ShallowCopy(self.settings)
+	self.model.explicitMouseLook = {} 
+	self.model.bindingExplicitMouseLook = KeyUtils:GetBindingByActionName("ExplicitMouseLook", bindings)
 	
-	if self.frmOptions.mouseLockToggleKey.nCode == nil then
-		self.wndMain:FindChild("BtnCameraLockKey"):SetText(tostring(self.boundKeys.mouseLockToggleKeys[1][1]))	
-	else
-		self.wndMain:FindChild("BtnCameraLockKey"):SetText(tostring(self.keyUtils:KeybindNCodeToChar(self.frmOptions.mouseLockToggleKey.nCode)))	
+	self.model.isMouseLmbBound = self.isMouseLmbBound
+	if self.isMouseLmbBound then
+		self.model.bindingLmb = KeyUtils:GetBinding(2, 0, 0, bindings)
 	end
 	
+	self.model.isMouseRmbBound = self.isMouseRmbBound
+	if self.isMouseRmbBound then
+		self.model.bindingRmb = KeyUtils:GetBinding(2, 0, 1, bindings)
+		self.model.rmbActionName = self.model.bindingRmb.strAction
+	end
+end
 
-	self.wndMain:FindChild("BtnTargetLockKey"):SetText(tostring(self.userSettings.mouseOverTargetLockKey))
+function ActionControls:GenerateView()
+	self.wndMain:FindChild("RbKeyLocking"):SetCheck(self.model.settings.mouseLockingType == EnumMouseLockingType.MovementKeys)
 	
-	self:SetMouseLmbBindButtonsState()
+	if self.model.explicitMouseLook.nCode ~= nil then
+		self.wndMain:FindChild("BtnCameraLockKey"):SetText(tostring(self.keyUtils:KeybindNCodeToChar(self.model.explicitMouseLook.nCode)))	
+	end
+
+	self.wndMain:FindChild("BtnTargetLockKey"):SetText(tostring(self.model.settings.mouseOverTargetLockKey))
+	
+	self.wndMain:FindChild("BindMouseButtons"):Enable(not self.model.isMouseLmbBound)
+	self.wndMain:FindChild("UnBindMouseButtons"):Enable(self.model.isMouseLmbBound)
 end
 
-function ActionControls:SetMouseLmbBindButtonsState()
-	self.wndMain:FindChild("BindMouseButtons"):Enable(not self.isMouseLmbBoundOption)
-	self.wndMain:FindChild("UnBindMouseButtons"):Enable(self.isMouseLmbBoundOption)
-end
-
+---- Controller like functions
 function ActionControls:OnRbKeyLockingCheck( wndHandler, wndControl, eMouseButton )
-	self.log:Debug("OnKeyLockingChkButtonCheck")
-	self.userSettings.mouseLockingType = EnumMouseLockingType.MovementKeys
+	self.model.settings.mouseLockingType = EnumMouseLockingType.MovementKeys
+	self:GenerateView()
 end
 
 function ActionControls:OnRbKeyLockingUncheck( wndHandler, wndControl, eMouseButton )
-	self.log:Debug("OnKeyLockingChkButtonUncheck")
-	self.userSettings.mouseLockingType = EnumMouseLockingType.None
+	self.model.settings.mouseLockingType = EnumMouseLockingType.None
+	self:GenerateView()
 end
 
--- Binding keys
 function ActionControls:OnBindMouseButtonsSignal( wndHandler, wndControl, eMouseButton )
-	self.log:Debug("OnBindMouseButtonsSignal")
+	self.model.isMouseLmbBound = true
+	self.model.rmbActionName = "DirectionalDash" -- TODO: split to other button
 	
-	self.isMouseLmbBoundOption = true
-	self:SetMouseLmbBindButtonsState()
+	self:GenerateView()
 end
 
 function ActionControls:OnUnBindMouseButtonsSignal( wndHandler, wndControl, eMouseButton )
-	self.isMouseLmbBoundOption = false
-	self:SetMouseLmbBindButtonsState()
+	self.model.isMouseLmbBound = false
+	self.model.isMouseRmbBound = false
+	self:GenerateView()
+end
+
+-- Key capture
+function ActionControls:SetBeginBindingState(wndControl)
+	wndControl:SetCheck(true)
+	wndControl:SetFocus()
+end
+
+function ActionControls:SetEndBindingState(wndControl)
+	wndControl:SetCheck(false)
+	wndControl:ClearFocus()
+	self:GenerateView()
 end
 
 function ActionControls:OnBindButtonSignal( wndHandler, wndControl, eMouseButton )
@@ -586,9 +579,9 @@ end
 
 function ActionControls:OnBtnCameraLockKey_WindowKeyDown(wndHandler, wndControl, strKeyName, nScanCode, nMetakeys)
 	if (not self:IsKeyAlreadyBound(1, 0, nScanCode)) then
-		self.frmOptions.mouseLockToggleKey.eDevice = 1
-		self.frmOptions.mouseLockToggleKey.eModifier = 0
-		self.frmOptions.mouseLockToggleKey.nCode = nScanCode
+		self.model.explicitMouseLook.eDevice = 1
+		self.model.explicitMouseLook.eModifier = 0
+		self.model.explicitMouseLook.nCode = nScanCode
 	end		
 
 	self:SetEndBindingState(wndControl)
@@ -598,7 +591,7 @@ function ActionControls:BtnTargetLockKey_WindowKeyDown( wndHandler, wndControl, 
 	local isBound = self:IsKeyAlreadyBound(1, 0, nScanCode)
 	
 	if (not isBound) then
-		self.userSettings.mouseOverTargetLockKey = self.keyUtils:KeybindNCodeToChar(nScanCode)
+		self.model.settings.mouseOverTargetLockKey = self.keyUtils:KeybindNCodeToChar(nScanCode)
 	end
 	
 	self:SetEndBindingState(wndControl)
@@ -612,15 +605,16 @@ function ActionControls:IsKeyAlreadyBound(eDevice, eModifier, nCode)
 	
 	if key == nil then return false end -- ????????????????
 	
-	if self.userSettings.mouseOverTargetLockKey == key then
+	if self.model.settings.mouseOverTargetLockKey == key then
 		return true
 	end
 
-	try(function ()
+	-- should this be executed, I can just overwrite existing bindings?
+	return isBound, binding = try(
+		function ()
 			local isBound = self.keyUtils:IsBound(eDevice, eModifier, nCode)
 			if isBound then
 				local existingBinding = self.keyUtils:GetBinding(eDevice, eModifier, nCode)
-				--slef.log:Info("Key '" .. tostring(key) .. "' is already bound.")
 				self.log:Info("Key '" .. tostring(key) .. "' is already bound to '" .. tostring(existingBinding.strActionLocalized) .. "'")
 				return 
 					true,
@@ -634,61 +628,79 @@ function ActionControls:IsKeyAlreadyBound(eDevice, eModifier, nCode)
 	return false
 end
 
-function ActionControls:SetBeginBindingState(wndControl)
-	wndControl:SetCheck(true)
-	wndControl:SetFocus()
-end
-
-function ActionControls:SetEndBindingState(wndControl)
-	wndControl:SetCheck(false)
-	wndControl:ClearFocus()
-	self:OptionWindowPopulateForm()
-end
-
 -- when the OK button is clicked
 function ActionControls:OnOK()
-	local bindings = GameLib.GetKeyBindings();
+	try(function ()		
+			local bindings = GameLib.GetKeyBindings();
 
-	if self.isMouseLmbBoundOption ~= self.isMouseLmbBound then
-		if GameLib.GetPlayerUnit():IsInCombat() then
-			self.log:Warn("In combat, changing bindings is not possible at this moment.")
-			return
-		end
-	
-		if self.isMouseLmbBoundOption then
-			self:BindMouseButtons(bindings)
-		else
-			self:UnbindMouseButtons(bindings)
-		end
-	end
-	
-	if self.frmOptions.mouseLockToggleKey.nCode ~= nil then
-		local key = self.frmOptions.mouseLockToggleKey
-		self.keyUtils:Bind("ExplicitMouseLook", 
-			1, 
-			1, --key.eDevice, 
-			0, --key.eModifier, 
-			key.nCode, 
-			true,
-			bindings)
-		
-		self.frmOptions.mouseLockToggleKey = {}
-	end
-	
-	self.keyUtils:CommitBindings(bindings)
-	
-	-- use current settings
-	self.settings = self.userSettings
-	
-	self:OnClose()
-	
-	self:InitializeDetection()
+			if self.model.isMouseLmbBound ~= self.isMouseLmbBound then
+				if self.model.isMouseLmbBound then
+					self:BindLmbMouseButton(bindings)
+				end
+				if self.model.isMouseRmbBound then
+					self:BindRmbMouseButton(bindings, self.model.rmbActionName)
+				end
+				
+				if not self.model.isMouseLmbBound and not self.model.isMouseRmbBound then
+					self:UnbindMouseButtons(bindings)
+				end
+			end
+			
+			if self.model.explicitMouseLook.nCode ~= nil then
+				local key = self.model.explicitMouseLook
+				self.keyUtils:Bind("ExplicitMouseLook", 
+					1, 
+					1, --key.eDevice, 
+					0, --key.eModifier, 
+					key.nCode, 
+					true,
+					bindings)
+			end
+			
+			self.keyUtils:CommitBindings(bindings)
+			
+			-- use current settings
+			self.settings = self.model.settings
+			
+			self:OnClose()
+			
+			self:InitializeDetection()
+		end,
+		function(e)
+			self.log:Error(e)
+		end)
 end
+
+-- Binding
+function ActionControls:BindLmbMouseButton(bindings)
+	self.keyUtils:Bind("LimitedActionSet1", 2, 2, 0, 0, true, bindings)
+	self.isMouseLmbBound = true
+	
+	self.log:Debug("Left mouse button bound to 'Action 1'.")
+end
+
+function ActionControls:BindRmbMouseButton(bindings, actionName)
+	self.keyUtils:Bind(actionName, 2, 2, 0, 1, true, bindings)
+	self.isMouseRmbBound = true
+	
+	self.log:Debug("Right mouse button bound to 'Directional dash'.")
+end
+
+function ActionControls:UnbindMouseButtons(bindings)
+	self.keyUtils:UnbindByInput(2, 0, 0, bindings) -- LMB
+	self.keyUtils:UnbindByInput(2, 0, 1, bindings) -- RMB
+	
+	self.isMouseLmbBound = false
+	self.isMouseRmbBound = false
+	
+	self.log:Debug("Left and right mouse buttons unbound.")
+end
+
 
 -- when the Cancel button is clicked
 function ActionControls:OnCancel()
 	-- discard current settings
-	self.userSettings = nil
+	self.model.settings = nil
 	
 	self:OnClose()	
 end
