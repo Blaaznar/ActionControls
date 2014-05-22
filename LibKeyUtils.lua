@@ -100,7 +100,7 @@ function KeyUtils:Bind(actionName, index, eDevice, eModifier, nCode, unbindConfl
 			self.log:Warn(inputKeyName .. " is already bound, please manually unbind it from the game's Keybind window."))
 	end
 	
-	local binding = self:GetBindingByActionName(bindings, actionName)
+	local binding = self:GetBindingByActionName(actionName, bindings)
 	binding.arInputs[index].eDevice = eDevice
 	binding.arInputs[index].nCode = nCode
 	
@@ -111,7 +111,7 @@ end
 function KeyUtils:Unbind(actionName, index, pBindings)
 	local shouldCommit = pBindings == nil
 	local bindings = pBindings or GameLib.GetKeyBindings();
-	local binding = self:GetBindingByActionName(bindings, actionName)
+	local binding = self:GetBindingByActionName(actionName, bindings)
 
 	if index == nil then 
 		for _, i in ipairs(binding.arInputs) do

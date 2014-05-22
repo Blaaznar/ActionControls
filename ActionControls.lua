@@ -610,7 +610,7 @@ function ActionControls:IsKeyAlreadyBound(eDevice, eModifier, nCode)
 	end
 
 	-- should this be executed, I can just overwrite existing bindings?
-	return isBound, binding = try(
+	local isBound, binding = try(
 		function ()
 			local isBound = self.keyUtils:IsBound(eDevice, eModifier, nCode)
 			if isBound then
@@ -625,7 +625,7 @@ function ActionControls:IsKeyAlreadyBound(eDevice, eModifier, nCode)
 			self.log:Error(e)
 		end)
 	
-	return false
+	return isBound
 end
 
 -- when the OK button is clicked
