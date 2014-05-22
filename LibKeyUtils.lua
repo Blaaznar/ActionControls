@@ -83,18 +83,17 @@ end
 
 -- TODO: parameters as tables
 
-function KeyUtils:Bind(actionName, index, eDevice, eModifier, nCode, unbindConflictingBindings, pBindings)
+function KeyUtils:Bind(actionName, index, eDevice, eModifier, nCode, unbindConflictingBindings, bindings)
 	assert(not GameLib.GetPlayerUnit():IsInCombat(), "In combat, changing bindings is not possible at this moment.")
+	assert(bindings, "Bindings not provided.")
 	assert(index, "Binding index not provided.")
 	assert(eDevice, "Binding eDevice not provided.")
 	assert(nCode, "Binding nCode not provided.")
 	
 	local inputKeyName = self:GetInputKeyName(eDevice, nCode)
-	local isBindingsProvided = pBindings ~= nil
-	local bindings = pBindings or GameLib.GetKeyBindings();
 		
 	if unbindConflictingBindings then
-		self:UnbindByInput(eDevice, eModifier, nCode, pBindings)
+		self:UnbindByInput(eDevice, eModifier, nCode, bindings)
 	else
 		assert(not self:IsBound(bindings), 
 			self.log:Warn(inputKeyName .. " is already bound, please manually unbind it from the game's Keybind window."))
@@ -105,12 +104,10 @@ function KeyUtils:Bind(actionName, index, eDevice, eModifier, nCode, unbindConfl
 	binding.arInputs[index].nCode = nCode
 	
 	self.log:Info("Bound binding for '" .. actionName .. "' at index " .. index .. " to: " .. inputKeyName)
-	
 end
 
-function KeyUtils:Unbind(actionName, index, pBindings)
-	local shouldCommit = pBindings == nil
-	local bindings = pBindings or GameLib.GetKeyBindings();
+function KeyUtils:Unbind(actionName, index, bindings)
+	assert(bindings, "Bindings not provided.")
 	local binding = self:GetBindingByActionName(actionName, bindings)
 
 	if index == nil then 
@@ -126,15 +123,10 @@ function KeyUtils:Unbind(actionName, index, pBindings)
 		
 		self.log:Info("Unbound binding for '" .. actionName .. "' at index " .. index .. ".")
 	end
-	
-	if shouldCommit then
-		CommitBindings(bindings)
-	end
 end
 
-function KeyUtils:UnbindByInput(eDevice, eModifier, nCode, pBindings)
-	local shouldCommit = pBindings == nil
-	local bindings = pBindings or GameLib.GetKeyBindings();
+function KeyUtils:UnbindByInput(eDevice, eModifier, nCode, bindings)
+	assert(bindings, "Bindings not provided.")
 	
 	for _, binding in ipairs(bindings) do
 		for _, arInput in ipairs(binding.arInputs) do
@@ -145,10 +137,6 @@ function KeyUtils:UnbindByInput(eDevice, eModifier, nCode, pBindings)
 			end
 		end
 	end
-	
-	if shouldCommit then
-		CommitBindings(bindings)
-	end
 end
 
 function KeyUtils:CommitBindings(bindings)
@@ -156,11 +144,11 @@ function KeyUtils:CommitBindings(bindings)
 	assert(not GameLib.GetPlayerUnit():IsInCombat(), "In combat, changing bindings is not possible at this moment.")
 
 	GameLib.SetKeyBindings(bindings)
-	self.log:Debug("Bindings saved.")
+	self.log:Info("Bindings saved.")
 end
 
-function KeyUtils:IsBound(eDevice, eModifier, nCode, pBindings)
-	local bindings = pBindings or GameLib.GetKeyBindings();
+function KeyUtils:IsBound(eDevice, eModifier, nCode, bindings)
+	if bindings == nil then bindings = GameLib.GetKeyBindings() end
 	
 	return table.ExistsItem(bindings, 
 		function (binding)
@@ -174,14 +162,18 @@ function KeyUtils:IsBound(eDevice, eModifier, nCode, pBindings)
 end
 
 function KeyUtils:GetBinding(eDevice, eModifier, nCode, bindings)
-	local bindings = pBindings or GameLib.GetKeyBindings();
+	if bindings == nil then bindings = GameLib.GetKeyBindings() end
 	
-	return table.FindItem(bindings, function(a) return a.eDevice == eDevice and a.eModifier == eModifier and a.nCode == nCode end)
+	for _, binding in ipairs(bindings) do
+		for _, arInput in ipairs(binding.arInputs) do
+			if arInput.eDevice == eDevice and arInput.eModifier == eModifier and arInput.nCode == nCode then
+				return binding
+			end
+		end
+	end
 end
 
 function KeyUtils:GetBindingByActionName(actionName, bindings)
-	local bindings = pBindings or GameLib.GetKeyBindings();
-	
 	return table.FindItem(bindings, function(a) return a.strAction == actionName end)
 end
 

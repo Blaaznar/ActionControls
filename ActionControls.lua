@@ -511,6 +511,7 @@ function ActionControls:GenerateModel()
 	self.model.settings = table.ShallowCopy(self.settings)
 	self.model.explicitMouseLook = {} 
 	self.model.bindingExplicitMouseLook = KeyUtils:GetBindingByActionName("ExplicitMouseLook", bindings)
+	self.model.explicitMouseLook.nCode = self.model.bindingExplicitMouseLook.arInputs[1].nCode
 	
 	self.model.isMouseLmbBound = self.isMouseLmbBound
 	if self.isMouseLmbBound then
@@ -631,7 +632,7 @@ end
 -- when the OK button is clicked
 function ActionControls:OnOK()
 	try(function ()		
-			local bindings = GameLib.GetKeyBindings();
+			local bindings = GameLib.GetKeyBindings()
 
 			if self.model.isMouseLmbBound ~= self.isMouseLmbBound then
 				if self.model.isMouseLmbBound then
