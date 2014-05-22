@@ -103,7 +103,7 @@ function KeyUtils:Bind(actionName, index, eDevice, eModifier, nCode, unbindConfl
 	binding.arInputs[index].eDevice = eDevice
 	binding.arInputs[index].nCode = nCode
 	
-	self.log:Info("Bound binding for '" .. actionName .. "' at index " .. index .. " to: " .. inputKeyName)
+	self.log:Debug("Bound binding for '" .. actionName .. "' at index " .. index .. " to: " .. inputKeyName)
 end
 
 function KeyUtils:Unbind(actionName, index, bindings)
@@ -116,12 +116,12 @@ function KeyUtils:Unbind(actionName, index, bindings)
 			binding.arInputs[i].nCode = 0    
 		end		
 
-		self.log:Info("Unbound binding for '" .. actionName .. "' at index " .. i .. ".")
+		self.log:Debug("Unbound binding for '" .. actionName .. "' at index " .. i .. ".")
 	else 
 		binding.arInputs[index].eDevice = 0
 		binding.arInputs[index].nCode = 0
 		
-		self.log:Info("Unbound binding for '" .. actionName .. "' at index " .. index .. ".")
+		self.log:Debug("Unbound binding for '" .. actionName .. "' at index " .. index .. ".")
 	end
 end
 
@@ -133,7 +133,7 @@ function KeyUtils:UnbindByInput(eDevice, eModifier, nCode, bindings)
 			if arInput.eDevice == eDevice and arInput.nCode == nCode then
 				arInput.eDevice = 0
 				arInput.nCode = 0
-				self.log:Info("Unbound " .. self:GetInputKeyName(eDevice, nCode) .. " from '" .. binding.strAction .. "'.")
+				self.log:Debug("Unbound " .. self:GetInputKeyName(eDevice, nCode) .. " from '" .. binding.strAction .. "'.")
 			end
 		end
 	end

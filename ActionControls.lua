@@ -529,16 +529,20 @@ function ActionControls:GenerateView()
 	self.wndMain:FindChild("RbKeyLocking"):SetCheck(self.model.settings.mouseLockingType == EnumMouseLockingType.MovementKeys)
 	
 	if self.model.explicitMouseLook.nCode ~= nil then
-		self.wndMain:FindChild("BtnCameraLockKey"):SetText(tostring(self.keyUtils:KeybindNCodeToChar(self.model.explicitMouseLook.nCode)))	
+		local strKey = self.keyUtils:KeybindNCodeToChar(self.model.explicitMouseLook.nCode)
+		
+		self.wndMain:FindChild("BtnCameraLockKey"):SetText(tostring(strKey or ""))	
 	end
 
-	self.wndMain:FindChild("BtnTargetLockKey"):SetText(tostring(self.model.settings.mouseOverTargetLockKey))
+	self.wndMain:FindChild("BtnTargetLockKey"):SetText(tostring(self.model.settings.mouseOverTargetLockKey or ""))
 	
 	self.wndMain:FindChild("BindMouseButtons"):Enable(not self.model.isMouseLmbBound)
 	self.wndMain:FindChild("UnBindMouseButtons"):Enable(self.model.isMouseLmbBound)
 end
 
----- Controller like functions
+-----------------------------------------------------------------------------------------------
+-- ActionControls Form functions
+-----------------------------------------------------------------------------------------------
 function ActionControls:OnRbKeyLockingCheck( wndHandler, wndControl, eMouseButton )
 	self.model.settings.mouseLockingType = EnumMouseLockingType.MovementKeys
 	self:GenerateView()
@@ -563,6 +567,7 @@ end
 function ActionControls:OnUnBindMouseButtonsSignal( wndHandler, wndControl, eMouseButton )
 	self.model.isMouseLmbBound = false
 	self.model.isMouseRmbBound = false
+	self.model.rmbActionName = ""
 	self:GenerateView()
 end
 
@@ -608,13 +613,12 @@ function ActionControls:IsKeyAlreadyBound(eDevice, eModifier, nCode)
 		return true
 	end
 	
-	if key == nil then return false end -- ????????????????
+	if key == nil then return false end -- ?
 	
 	if self.model.settings.mouseOverTargetLockKey == key then
 		return true
 	end
 
-	-- should this be executed, I can just overwrite existing bindings?
 	local isBound, binding = try(
 		function ()
 			local isBound = self.keyUtils:IsBound(eDevice, eModifier, nCode)
