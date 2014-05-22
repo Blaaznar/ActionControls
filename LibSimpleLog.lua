@@ -13,11 +13,11 @@ function SimpleLog:new(o)
 end
 
 function SimpleLog:SetLogLevel(logLevel)
-	self:logLevel = logLevel
+	self.logLevel = tonumber(logLevel)
 end
 
 function SimpleLog:SetLogName(logName)
-	self:logName = logName
+	self.logName = logName
 end
 
 function SimpleLog:Debug (message) 

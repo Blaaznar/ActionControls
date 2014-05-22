@@ -8,9 +8,9 @@ require "GameLib"
 -----------------------------------------------------------------------------------------------
 -- Packages
 -----------------------------------------------------------------------------------------------
-local SimpleLog = Apollo.GetPackage("Blaz:Lib:SimpleLog-0.1").tPackage
 local KeyUtils = Apollo.GetPackage("Blaz:Lib:KeyUtils-0.2").tPackage
 local LuaUtils = Apollo.GetPackage("Blaz:Lib:LuaUtils-0.1").tPackage
+local SimpleLog = Apollo.GetPackage("Blaz:Lib:SimpleLog-0.1").tPackage
  
 -----------------------------------------------------------------------------------------------
 -- ActionControls Module Definition
@@ -57,7 +57,7 @@ function ActionControls:new(logInst, keyUtilsInst)
 	}
 	
 	o.frmOptions = {}
-	o.frmOptions.mouseLockToggleKey = nil
+	o.frmOptions.mouseLockToggleKey = {}
 	
     return o
 end
@@ -65,7 +65,7 @@ end
 function ActionControls:Init()
 	self.log:SetLogName("ActionControls")
 	self.log:SetLogLevel(3)
-	
+
 	local bHasConfigureFunction = true
 	local strConfigureButtonText = "Configure ActionControls"
 	local tDependencies = {
@@ -206,10 +206,10 @@ function ActionControls:OnRestore(eType, t)
 		return 
 	end
 
-	self:RestoreUserSettings()
+	self:RestoreUserSettings(t)
 end
 
-function ActionControls:RestoreUserSettings()
+function ActionControls:RestoreUserSettings(t)
 	local status, inspectCallResult = pcall(
 	function ()
 		local settings = table.ShallowCopy(self.settings)
@@ -305,34 +305,28 @@ function ActionControls:GetBoundCharsForAction(bindings, actionName)
 	return boundChars
 end
 
-function ActionControls:BindMouseButtons()
+function ActionControls:BindMouseButtons(bindings)
 	if GameLib.GetPlayerUnit():IsInCombat() then
 		self.log:Warn("In combat, changing bindings is not possible at this moment.")
 		return
 	end
 	
-	local bindings = GameLib.GetKeyBindings();
-
-	self.keyUtils:Bind("LimitedActionSet1", 2, 2, 0, 1, true, bindings)
+	self.keyUtils:Bind("LimitedActionSet1", 2, 2, 0, 0, true, bindings)
 	self.keyUtils:Bind("DirectionalDash", 2, 2, 0, 1, true, bindings)
-	self.keyUtils:CommitBindings(bindings)
 	
 	self.isMouseLmbBound = true
 	
 	self.log:Debug("Left and right mouse buttons bound to 'Action 1' and 'Directional dash'.")
 end
 
-function ActionControls:UnbindMouseButtons()
+function ActionControls:UnbindMouseButtons(bindings)
 	if GameLib.GetPlayerUnit():IsInCombat() then
 		self.log:Warn("In combat, changing bindings is not possible at this moment.")
 		return
 	end
 	
-	local bindings = GameLib.GetKeyBindings();
-	
-	self.keyUtils:Unbind("LimitedActionSet1", 2, bindings)
-	self.keyUtils:Unbind("DirectionalDash", 2, bindings)
-	self.keyUtils:CommitBindings(bindings)
+	self.keyUtils:UnbindByInput(2, 0, 0, bindings) -- LMB
+	self.keyUtils:UnbindByInput(2, 0, 1, bindings) -- RMB
 	
 	self.isMouseLmbBound = false	
 	
@@ -536,6 +530,9 @@ function ActionControls:OnShowOptionWindow()
 	self:ReadKeyBindings()
 	self.userSettings = table.ShallowCopy(self.settings)
 	
+	-- get existing binding here... TODO:
+	self.frmOptions.mouseLockToggleKey = {}
+
 	self:OptionWindowPopulateForm()
 	
 	self.wndMain:Invoke() -- show the window
@@ -546,8 +543,14 @@ function ActionControls:OptionWindowPopulateForm()
 	self.isMouseLmbBoundOption = self.isMouseLmbBound
 	
 	self.wndMain:FindChild("RbKeyLocking"):SetCheck(self.userSettings.mouseLockingType == EnumMouseLockingType.MovementKeys)
+	
+	if self.frmOptions.mouseLockToggleKey.nCode == nil then
+		self.wndMain:FindChild("BtnCameraLockKey"):SetText(tostring(self.boundKeys.mouseLockToggleKeys[1][1]))	
+	else
+		self.wndMain:FindChild("BtnCameraLockKey"):SetText(tostring(self.keyUtils:KeybindNCodeToChar(self.frmOptions.mouseLockToggleKey.nCode)))	
+	end
+	
 
-	self.wndMain:FindChild("BtnCameraLockKey"):SetText(tostring(boundKeys.mouseLockToggleKeys[1][1]))		
 	self.wndMain:FindChild("BtnTargetLockKey"):SetText(tostring(self.userSettings.mouseOverTargetLockKey))
 	
 	self:SetMouseLmbBindButtonsState()
@@ -573,12 +576,12 @@ function ActionControls:OnBindMouseButtonsSignal( wndHandler, wndControl, eMouse
 	self.log:Debug("OnBindMouseButtonsSignal")
 	
 	self.isMouseLmbBoundOption = true
-	self:SetMouseBindButtonsState()
+	self:SetMouseLmbBindButtonsState()
 end
 
 function ActionControls:OnUnBindMouseButtonsSignal( wndHandler, wndControl, eMouseButton )
 	self.isMouseLmbBoundOption = false
-	self:SetMouseBindButtonsState()
+	self:SetMouseLmbBindButtonsState()
 end
 
 function ActionControls:OnBindButtonSignal( wndHandler, wndControl, eMouseButton )
@@ -596,15 +599,17 @@ function ActionControls:OnBtnCameraLockKey_WindowKeyDown(wndHandler, wndControl,
 end
 
 function ActionControls:BtnTargetLockKey_WindowKeyDown( wndHandler, wndControl, strKeyName, nScanCode, nMetakeys )
-	if (not self:IsKeyAlreadyBound(1, 0, nScanCode)) then
-		self.userSettings.mouseOverTargetLockKey = key
+	local isBound = self:IsKeyAlreadyBound(1, 0, nScanCode)
+	
+	if (not isBound) then
+		self.userSettings.mouseOverTargetLockKey = self.keyUtils:KeybindNCodeToChar(nScanCode)
 	end
 	
 	self:SetEndBindingState(wndControl)
 end
 
 function ActionControls:IsKeyAlreadyBound(eDevice, eModifier, nCode)
-	local key = self.keyUtils:KeybindNCodeToChar(nScanCode)
+	local key = self.keyUtils:KeybindNCodeToChar(nCode)
 	if strKeyName == "Esc" then
 		return true
 	end
@@ -614,10 +619,12 @@ function ActionControls:IsKeyAlreadyBound(eDevice, eModifier, nCode)
 	if self.userSettings.mouseOverTargetLockKey == key then
 		return true
 	end
-	
-	local isBound, existingBinding = self.keyUtils:IsBound(eDevice, eModifier, nCode)
+
+	local isBound = self.keyUtils:IsBound(eDevice, eModifier, nCode)
 
 	if isBound then
+		local existingBinding = self.keyUtils:GetBinding(eDevice, eModifier, nCode)
+		--slef.log:Info("Key '" .. tostring(key) .. "' is already bound.")
 		self.log:Info("Key '" .. tostring(key) .. "' is already bound to '" .. tostring(existingBinding.strActionLocalized) .. "'")
 		return 
 			true,
@@ -638,6 +645,8 @@ end
 
 -- when the OK button is clicked
 function ActionControls:OnOK()
+	local bindings = GameLib.GetKeyBindings();
+
 	if self.isMouseLmbBoundOption ~= self.isMouseLmbBound then
 		if GameLib.GetPlayerUnit():IsInCombat() then
 			self.log:Warn("In combat, changing bindings is not possible at this moment.")
@@ -645,23 +654,26 @@ function ActionControls:OnOK()
 		end
 	
 		if self.isMouseLmbBoundOption then
-			self:BindMouseButtons()
+			self:BindMouseButtons(bindings)
 		else
-			self:UnbindMouseButtons()
-		end
-		
-		if self.frmOptions.mouseLockToggleKey ~= nil then
-			local key = self.frmOptions.mouseLockToggleKey
-			self.keyUtils:Bind("ExplicitMouseLook", 
-				1, 
-				key.eDevice, 
-				key.eModifier, 
-				key.nCode, 
-				true)
-				
-			self.frmOptions.mouseLockToggleKey = nil
+			self:UnbindMouseButtons(bindings)
 		end
 	end
+	
+	if self.frmOptions.mouseLockToggleKey.nCode ~= nil then
+		local key = self.frmOptions.mouseLockToggleKey
+		self.keyUtils:Bind("ExplicitMouseLook", 
+			1, 
+			1, --key.eDevice, 
+			0, --key.eModifier, 
+			key.nCode, 
+			true,
+			bindings)
+		
+		self.frmOptions.mouseLockToggleKey = {}
+	end
+	
+	self.keyUtils:CommitBindings(bindings)
 	
 	-- use current settings
 	self.settings = self.userSettings

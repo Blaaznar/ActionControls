@@ -85,11 +85,12 @@ end
 
 function KeyUtils:Bind(actionName, index, eDevice, eModifier, nCode, unbindConflictingBindings, pBindings)
 	assert(not GameLib.GetPlayerUnit():IsInCombat(), "In combat, changing bindings is not possible at this moment.")
-	assert(index, error("Binding index not provided."))
-	assert(eDevice, error("Binding eDevice not provided."))
-	assert(nCode, error("Binding nCode not provided."))
+	assert(index, "Binding index not provided.")
+	assert(eDevice, "Binding eDevice not provided.")
+	assert(nCode, "Binding nCode not provided.")
 	
 	local inputKeyName = self:GetInputKeyName(eDevice, nCode)
+	local isBindingsProvided = pBindings ~= nil
 	local bindings = pBindings or GameLib.GetKeyBindings();
 		
 	if unbindConflictingBindings then
@@ -103,7 +104,8 @@ function KeyUtils:Bind(actionName, index, eDevice, eModifier, nCode, unbindConfl
 	binding.arInputs[index].eDevice = eDevice
 	binding.arInputs[index].nCode = nCode
 	
-	self.log:Debug("Bound binding for '" .. actionName .. "' at index " .. index .. " to: " .. inputKeyName)
+	self.log:Info("Bound binding for '" .. actionName .. "' at index " .. index .. " to: " .. inputKeyName)
+	
 end
 
 function KeyUtils:Unbind(actionName, index, pBindings)
@@ -151,24 +153,27 @@ function KeyUtils:IsBound(eDevice, eModifier, nCode, pBindings)
 	
 	return table.ExistsItem(bindings, 
 		function (binding)
-			return table.ExistsItem(binding.arInputs, 
-				function (arInput) 
-					return 
-						arInput.eDevice == eDevice and arInput.nCode == nCode, 
-						binding
-				end) 
+			return 
+				table.ExistsItem(binding.arInputs, 
+					function (arInput) 
+						return 
+							arInput.eDevice == eDevice and arInput.eModifier == eModifier and arInput.nCode == nCode
+					end)
 		end)
 end
 
+function KeyUtils:GetBinding(eDevice, eModifier, nCode)
+	return table.FindItem(bindings, function(a) return a.eDevice == eDevice and a.eModifier == eModifier and a.nCode == nCode end)
+end
 
 function KeyUtils:GetBindingByActionName(bindings, actionName)
 	return table.FindItem(bindings, function(a) return a.strAction == actionName end)
 end
 
 function KeyUtils:GetInputKeyName(eDevice, nCode)
-	if eDevice == 2
+	if eDevice == 2 then
 		return "Mouse button " .. tostring(nCode + 1)
-	else if eDevice == 1
+	elseif eDevice == 1 then
 		local keyName = self:KeybindNCodeToChar(nCode)
 		
 		if keyName ~= nil then
