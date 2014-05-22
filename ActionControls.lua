@@ -551,7 +551,11 @@ end
 
 function ActionControls:OnBindMouseButtonsSignal( wndHandler, wndControl, eMouseButton )
 	self.model.isMouseLmbBound = true
-	self.model.rmbActionName = "DirectionalDash" -- TODO: split to other button
+	
+	 -- TODO: split to other button
+	self.model.isMouseRmbBound = true
+	self.model.rmbActionName = "DirectionalDash"
+	-------------------------------
 	
 	self:GenerateView()
 end
