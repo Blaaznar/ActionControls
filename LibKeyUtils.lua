@@ -73,12 +73,44 @@ function KeyUtils:new(logInst)
     return o
 end
 
-function KeyUtils:CharToSysKeyCode(char)
-	return systemKeyMap[char]
+function KeyUtils:GetInputKeyName(eDevice, nCode)
+	local eModifier = 0
+
+	if eDevice == 2 then
+		return "Mouse button " .. tostring(nCode + 1)
+	elseif eDevice == 1 then
+		local keyName = self:KeybindNCodeToChar(nCode)
+		
+		if keyName ~= nil then
+			if eModifier == 0 then
+				return nCodeKeyMap[nCode]
+			else
+				local modifier
+				if eModifier == 1 then
+					modifier = "Shift"
+				elseif eModifier == 2 then
+					modifier = "Ctrl"
+				elseif eModifier == 4 then
+					modifier = "Alt"
+				else
+					modifier = "Unknown"
+				end
+				return string.format("%s-%s", modifier, keyName)
+			end
+		else
+			return "Unknown key"
+		end
+	else
+		return "Unknown"
+	end
 end
 
 function KeyUtils:KeybindNCodeToChar(nCode)
 	return nCodeKeyMap[nCode]
+end
+
+function KeyUtils:CharToSysKeyCode(char)
+	return systemKeyMap[char]
 end
 
 -- TODO: parameters as tables
@@ -103,7 +135,7 @@ function KeyUtils:Bind(actionName, index, eDevice, eModifier, nCode, unbindConfl
 	binding.arInputs[index].eDevice = eDevice
 	binding.arInputs[index].nCode = nCode
 	
-	self.log:Debug("Bound binding for '" .. actionName .. "' at index " .. index .. " to: " .. inputKeyName)
+	self.log:Debug("Bound binding for '%s' at index %s to: %s", actionName, tostring(index), inputKeyName)
 end
 
 function KeyUtils:Unbind(actionName, index, bindings)
@@ -116,12 +148,12 @@ function KeyUtils:Unbind(actionName, index, bindings)
 			binding.arInputs[i].nCode = 0    
 		end		
 
-		self.log:Debug("Unbound binding for '" .. actionName .. "' at index " .. i .. ".")
+		self.log:Debug("Unbound binding for '%s' at index %s.", actionName, tostring(i))
 	else 
 		binding.arInputs[index].eDevice = 0
 		binding.arInputs[index].nCode = 0
 		
-		self.log:Debug("Unbound binding for '" .. actionName .. "' at index " .. index .. ".")
+		self.log:Debug("Unbound binding for '%s' at index %s.", actionName, tostring(index))
 	end
 end
 
@@ -133,7 +165,8 @@ function KeyUtils:UnbindByInput(eDevice, eModifier, nCode, bindings)
 			if arInput.eDevice == eDevice and arInput.nCode == nCode then
 				arInput.eDevice = 0
 				arInput.nCode = 0
-				self.log:Debug("Unbound " .. self:GetInputKeyName(eDevice, nCode) .. " from '" .. binding.strAction .. "'.")
+				Print(self:GetInputKeyName(eDevice, nCode))
+				self.log:Debug("Unbound '%s' from '%s'.", self:GetInputKeyName(eDevice, nCode), binding.strAction)
 			end
 		end
 	end
@@ -175,22 +208,6 @@ end
 
 function KeyUtils:GetBindingByActionName(actionName, bindings)
 	return table.FindItem(bindings, function(a) return a.strAction == actionName end)
-end
-
-function KeyUtils:GetInputKeyName(eDevice, nCode)
-	if eDevice == 2 then
-		return "Mouse button " .. tostring(nCode + 1)
-	elseif eDevice == 1 then
-		local keyName = self:KeybindNCodeToChar(nCode)
-		
-		if keyName ~= nil then
-			return keyName
-		else
-			return "Unknown key"
-		end
-	else
-		return "Unknown"
-	end
 end
 
 -- Register Library

@@ -508,6 +508,8 @@ function ActionControls:GenerateModel()
 	local bindings = self:ReadKeyBindings()
 	
 	self.model = {}
+	self.model.bindingsChanged = false
+	
 	self.model.settings = table.ShallowCopy(self.settings)
 	self.model.explicitMouseLook = {} 
 	self.model.bindingExplicitMouseLook = KeyUtils:GetBindingByActionName("ExplicitMouseLook", bindings)
@@ -655,7 +657,8 @@ function ActionControls:OnOK()
 				end
 			end
 			
-			if self.model.explicitMouseLook.nCode ~= nil then
+			if self.model.explicitMouseLook.nCode ~= nil 
+				and self.model.explicitMouseLook.nCode ~= KeyUtils:GetBindingByActionName("ExplicitMouseLook", bindings).arInputs[1].nCode then
 				local key = self.model.explicitMouseLook
 				self.keyUtils:Bind("ExplicitMouseLook", 
 					1, 
