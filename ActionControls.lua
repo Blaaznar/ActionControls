@@ -590,7 +590,11 @@ function ActionControls:OnBindButtonSignal( wndHandler, wndControl, eMouseButton
 end
 
 function ActionControls:OnBtnCameraLockKey_WindowKeyDown(wndHandler, wndControl, strKeyName, nScanCode, nMetakeys)
-	if (not self:IsKeyAlreadyBound(1, 0, nScanCode)) then
+	if self.keyUtils:KeybindNCodeToChar(nScanCode) == "Esc" then
+		self.model.explicitMouseLook.eDevice = 0
+		self.model.explicitMouseLook.eModifier = 0
+		self.model.explicitMouseLook.nCode = 0
+	elseif (not self:IsKeyAlreadyBound(1, 0, nScanCode)) then
 		self.model.explicitMouseLook.eDevice = 1
 		self.model.explicitMouseLook.eModifier = 0
 		self.model.explicitMouseLook.nCode = nScanCode
@@ -600,9 +604,9 @@ function ActionControls:OnBtnCameraLockKey_WindowKeyDown(wndHandler, wndControl,
 end
 
 function ActionControls:BtnTargetLockKey_WindowKeyDown( wndHandler, wndControl, strKeyName, nScanCode, nMetakeys )
-	local isBound = self:IsKeyAlreadyBound(1, 0, nScanCode)
-	
-	if (not isBound) then
+	if self.keyUtils:KeybindNCodeToChar(nScanCode) == "Esc" then
+		self.model.settings.mouseOverTargetLockKey = nil
+	elseif not self:IsKeyAlreadyBound(1, 0, nScanCode) then
 		self.model.settings.mouseOverTargetLockKey = self.keyUtils:KeybindNCodeToChar(nScanCode)
 	end
 	
@@ -611,9 +615,6 @@ end
 
 function ActionControls:IsKeyAlreadyBound(eDevice, eModifier, nCode)
 	local key = self.keyUtils:KeybindNCodeToChar(nCode)
-	if strKeyName == "Esc" then
-		return true
-	end
 	
 	if key == nil then return false end -- ?
 	
@@ -626,7 +627,7 @@ function ActionControls:IsKeyAlreadyBound(eDevice, eModifier, nCode)
 			local isBound = self.keyUtils:IsBound(eDevice, eModifier, nCode)
 			if isBound then
 				local existingBinding = self.keyUtils:GetBinding(eDevice, eModifier, nCode)
-				self.log:Info("Key '" .. tostring(key) .. "' is already bound to '" .. tostring(existingBinding.strActionLocalized) .. "'")
+				self.log:Info("Key '%s' is already bound to '%s'", tostring(key), tostring(existingBinding.strActionLocalized))
 				return 
 					true,
 					existingBinding
