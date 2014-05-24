@@ -356,30 +356,35 @@ end
 -------------------------------------------------------------------------------
 -- Key processing
 -------------------------------------------------------------------------------
-function ActionControls:OnSystemKeyDown(key)
-	--self.log:Debug("OnSystemKeyDown(" .. key .. ")")
-
-	-- modifiers not supported yet
-	if Apollo.IsShiftKeyDown() or Apollo.IsAltKeyDown() or Apollo.IsControlKeyDown() then
+function ActionControls:OnSystemKeyDown(sysKeyCode)
+	local strKey = self.keyUtils:SysKeyCodeToChar(sysKeyCode)
+	--self.log:Debug("OnSystemKeyDown(%s): %s", sysKeyCode, tostring(strKey))
+	
+	if strKey == nil then
+		self.log:Debug("Unknown key code (%s), please report it to addon author.", sysKeyCode)
+		return
+	end
+	
+	-- modifiers not properly supported yet
+	if Apollo.IsAltKeyDown() 
+	or Apollo.IsControlKeyDown() 
+	--or Apollo.IsShiftKeyDown() 
+	then
 		return
 	end
 
-	-- stop processing keys if configuration or keybind windows are open
-	--local keybindForm = Apollo.FindWindowByName("KeybindForm")	
+	-- stop processing keys if configuration window is open
 	if (self.wndMain ~= nil and self.wndMain:IsVisible()) 
-		--or (keybindForm ~= nil and keybindForm:IsVisible())
 	then
 		self:SetMouseLock(false)
 		return
 	end
 
 	-- target locking
-	if key == self.keyUtils:CharToSysKeyCode(self.settings.mouseOverTargetLockKey) then
+	if strKey == self.settings.mouseOverTargetLockKey then
 		if GameLib.GetTargetUnit() ~= nil then
-			--self.log:Debug('target lock toggle')
 			self:SetMouseOverTargetLock(not self:GetMouseOverTargetLock())
 		else
-			--self.log:Debug('target lock off')
 			self:SetMouseOverTargetLock(false)
 		end
 		return
@@ -387,9 +392,9 @@ function ActionControls:OnSystemKeyDown(key)
 
 	-- camera lock toggle
 	for _,keys in ipairs(self.boundKeys.mouseLockToggleKeys) do
-		if key == self.keyUtils:CharToSysKeyCode(keys[1]) 
-		or key == self.keyUtils:CharToSysKeyCode(keys[2]) then
-			self.log:Debug("OnSystemKeyDown(" .. key .. ") - Manual toggle")
+		if strKey == keys[1]
+		or strKey == keys[2] then
+			self.log:Debug("OnSystemKeyDown(%s) - Manual toggle", sysKeyCode)
 			self:ToggleMouseLock()
 			return
 		end
@@ -398,9 +403,9 @@ function ActionControls:OnSystemKeyDown(key)
 	-- camera locking
 	if self.settings.mouseLockingType == EnumMouseLockingType.MovementKeys then
 		for _,keys in ipairs(self.boundKeys.mouseLockTriggerKeys) do
-			if key == self.keyUtils:CharToSysKeyCode(keys[1]) 
-			or key == self.keyUtils:CharToSysKeyCode(keys[2]) then
-				self.log:Debug("OnSystemKeyDown(" .. key .. ") - Manual movement lock")
+			if strKey == keys[1] 
+			or strKey == keys[2] then
+				self.log:Debug("OnSystemKeyDown(%s) - Manual movement lock", sysKeyCode)
 				self:SetMouseLock(true)
 				return
 			end

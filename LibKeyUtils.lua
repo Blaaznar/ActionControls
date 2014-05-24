@@ -34,11 +34,6 @@ local systemKeyMap = {
 	["["] = 219, ["\\"] = 220, ["]"] = 221, ["'"] = 222
 }
 
-local systemKeyMapInv = {}
-for k,v in ipairs(systemKeyMap) do 
-	table.insert(systemKeyMapInv, v, k) 
-end
-
 -- Key map for keybinding codes in keyBinding.arInputs[1].nCode
 local nCodeKeyMap = {
 	[1] = "Esc", [2] = "1", [3] = "2", [4] = "3", [5] = "4", [6] = "5",
@@ -65,6 +60,17 @@ local nCodeKeyMap = {
 	[328] = "Up", [331] = "Left", [333] = "Right", [336] = "Down"
 }
 
+-- Inverted tables for faster lookups
+local systemKeyMapInv = {}
+for k,v in pairs(systemKeyMap) do 
+	table.insert(systemKeyMapInv, v, k) 
+end
+
+local nCodeKeyMapInv = {}
+for k,v in pairs(nCodeKeyMap) do 
+	nCodeKeyMapInv[v] = k 
+end
+
 local KeyUtils = {}
 
 function KeyUtils:new(logInst)
@@ -74,7 +80,7 @@ function KeyUtils:new(logInst)
 
     -- initialize variables here
 	o.log = logInst
-	
+
     return o
 end
 
@@ -114,8 +120,16 @@ function KeyUtils:KeybindNCodeToChar(nCode)
 	return nCodeKeyMap[nCode]
 end
 
-function KeyUtils:CharToSysKeyCode(char)
-	return systemKeyMap[char]
+function KeyUtils:CharToKeybindNCode(strKey)
+	return nCodeKeyMapInv[strKey]
+end
+
+function KeyUtils:CharToSysKeyCode(strKey)
+	return systemKeyMap[strKey]
+end
+
+function KeyUtils:SysKeyCodeToChar(sysKeyCode)
+	return systemKeyMapInv[sysKeyCode]
 end
 
 -- TODO: parameters as tables

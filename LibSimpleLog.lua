@@ -52,18 +52,11 @@ end
 
 function SimpleLog:Error (message, ...) 
 	if self.logLevel > 0 then
-		--local strMessage = tostring(message)
-	
 		if arg == nil then
 			Print(string.format("[%s - Error] : %s", self.logName, tostring(message)))
 		else
-			for _, a in ipairs(arg) do
-				a = tostring(a)
-			end
-		
 			Print(string.format("[%s - Error] : %s", self.logName, string.format(message, unpack(arg))))
 		end
-		--Apollo.AddAddonErrorText(self, strMessage)
 	end
 end
 
