@@ -37,7 +37,8 @@ function ActionControls:new(logInst, keyUtilsInst)
     -- variables
     o.log = logInst
     o.keyUtils = keyUtilsInst
-
+    
+    
     o.isAutomaticMouseLockDelayed = false
     o.immediateMouseOverUnit = nil
     o.lastTargetUnit = nil
@@ -54,6 +55,9 @@ function ActionControls:new(logInst, keyUtilsInst)
     }
     
     o.model = {}
+    
+    -- Experimental
+    o.automaticMouseBinding = false
     
     return o
 end
@@ -114,69 +118,71 @@ function ActionControls:OnDocLoaded()
         Apollo.RegisterSlashCommand("AC", "OnActionControlsOn", self)
         Apollo.RegisterSlashCommand("ActionControls", "OnActionControlsOn", self)
         Apollo.RegisterSlashCommand("ac-debug", "OnActionControlsOnDebug", self)
+        Apollo.RegisterSlashCommand("ac-autobind", "OnActionControlsOnAutoBind", self)
         
-        -- Unlock triggers
-        Apollo.RegisterEventHandler("Test_MouseReturnSignal", "OnGameDialogInteraction", self)
-        
-        Apollo.RegisterEventHandler("AbilityWindowHasBeenToggled", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("GenericEvent_ShowConfirmLeaveDisband", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("GenericEvent_ToggleGroupBag", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("Guild_WindowLoaded", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("GuildBankerOpen", "OnGameDialogInteraction", self) 
-        Apollo.RegisterEventHandler("GuildRegistrarOpen", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("HousingBrokerOpen", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("HousingPanelControlOpen", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("InspectWindowHasBeenToggled", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("InvokeCraftingWindow", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("InvokeFriendsList", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("InvokeScientistExperimentation", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("InvokeSettlerBuild", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("InvokeShuttlePrompt", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("InvokeSoldierBuild", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("InvokeTaxiWindow", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("InvokeTradeskillTrainerWindow", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("InvokeVendorWindow", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("MailBoxActivate", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("MatchingGameReady", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("PlayerPathShow", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("PlayerPathShowWithData", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ResourceConversionOpen", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ShowBank", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ShowDye", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ShowInstanceGameModeDialog", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ShowQuestLog", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ShowResurrectDialog", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("Test_MouseReturnSignal", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ToggleAbilitiesWindow", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ToggleAchievementsFromHUD", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ToggleAchievementWindow", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ToggleAuctionWindow", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ToggleChallengesWindow", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ToggleCharacterWindow", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ToggleCodex", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ToggleGalacticArchiveWindow", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ToggleGroupFinder", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ToggleInventory", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ToggleMailWindow", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ToggleProgressLog", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ToggleSocialWindow", "OnGameDialogInteraction", self)        
-        Apollo.RegisterEventHandler("ToggleQuestLog", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ToggleTradeskills", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("ToggleZoneMap", "OnGameDialogInteraction", self)
-        Apollo.RegisterEventHandler("TradeskillEngravingStationOpen", "OnGameDialogInteraction", self)
+        -- Unlock triggers - general unlocking
+        self:RegisterEvents("OnGameDialogInteraction", 
+            "Test_MouseReturnSignal",
+            "AbilityWindowHasBeenToggled",
+            "GenericEvent_ShowConfirmLeaveDisband",
+            "GenericEvent_ToggleGroupBag",
+            "Guild_WindowLoaded",
+            "GuildBankerOpen", 
+            "GuildRegistrarOpen",
+            "HousingBrokerOpen",
+            "HousingPanelControlOpen",
+            "InspectWindowHasBeenToggled",
+            "InvokeCraftingWindow",
+            "InvokeFriendsList",
+            "InvokeScientistExperimentation",
+            "InvokeSettlerBuild",
+            "InvokeShuttlePrompt",
+            "InvokeSoldierBuild",
+            "InvokeTaxiWindow",
+            "InvokeTradeskillTrainerWindow",
+            "InvokeVendorWindow",
+            "MailBoxActivate",
+            "MatchingGameReady",
+            "PlayerPathShow",
+            "PlayerPathShowWithData",
+            "ResourceConversionOpen",
+            "ShowBank",
+            "ShowDye",
+            "ShowInstanceGameModeDialog",
+            "ShowQuestLog",
+            "ShowResurrectDialog",
+            "Test_MouseReturnSignal",
+            "ToggleAbilitiesWindow",
+            "ToggleAchievementsFromHUD",
+            "ToggleAchievementWindow",
+            "ToggleAuctionWindow",
+            "ToggleChallengesWindow",
+            "ToggleCharacterWindow",
+            "ToggleCodex",
+            "ToggleGalacticArchiveWindow",
+            "ToggleGroupFinder",
+            "ToggleInventory",
+            "ToggleMailWindow",
+            "ToggleProgressLog",
+            "ToggleSocialWindow",        
+            "ToggleQuestLog",
+            "ToggleTradeskills",
+            "ToggleZoneMap",
+            "TradeskillEngravingStationOpen")
 
-        -- In-your-face windows
-        Apollo.RegisterEventHandler("DuelStateChanged",    "OnGameDialog", self)
-        Apollo.RegisterEventHandler("MatchingGameReady", "OnGameDialog", self)
-        Apollo.RegisterEventHandler("PVPMatchFinished",    "OnGameDialog", self)
-        Apollo.RegisterEventHandler("P2PTradeInvite", "OnGameDialog", self)
-        Apollo.RegisterEventHandler("ProgressClickWindowDisplay", "OnGameDialog", self)
+        -- Unlock triggers - auto-popup windows 
+        -- TODO: Monitor Shown state
+        self:RegisterEvents("OnGameDialog", 
+            "DuelStateChanged",
+            "MatchingGameReady",
+            "PVPMatchFinished",
+            "P2PTradeInvite",
+            "ProgressClickWindowDisplay")
         
         Apollo.RegisterTimerHandler("GameDialogTimer", "OnGameDialogTimer", self)
         Apollo.CreateTimer("GameDialogTimer", 0.3, false)
         Apollo.StopTimer("GameDialogTimer")
         
-                
         -- Lock triggers
         Apollo.RegisterEventHandler("SystemKeyDown", "OnSystemKeyDown", self) 
         Apollo.RegisterEventHandler("GameClickWorld", "OnGameClickWorld", self)
@@ -200,6 +206,12 @@ function ActionControls:OnDocLoaded()
         self:ReadKeyBindings()
         
         self:InitializeDetection()
+    end
+end
+
+function ActionControls:RegisterEvents(strFunction, ...)
+    for _,strEvent in ipairs(arg) do
+        Apollo.RegisterEventHandler(strEvent, strFunction, self)
     end
 end
 
@@ -249,6 +261,19 @@ end
 -- on SlashCommand "/ac-debug"
 function ActionControls:OnActionControlsOnDebug()
     self.log:SetLogLevel(4)
+end
+
+-- on SlashCommand "/ac-autobind"
+function ActionControls:OnActionControlsOnAutoBind()
+    self.automaticMouseBinding = not self.automaticMouseBinding
+    
+    if self.automaticMouseBinding then
+        self.log:Warn("Automatic mouse binding turned on. Your mouse buttons will now automatically rebind to Action1/Dodge only when mouse look is enabled.")
+        self.log:Warn("This feature is experimental and will not be able to switch bindings once your character is in combat.")
+        self.log:Warn("If you like it, petition Carbine to allow this kind of functionality in combat.")
+    end
+    
+    self:SetMouseLock(false)
 end
 
 -----------------------------------------------------------------------------------------------
@@ -307,9 +332,9 @@ function ActionControls:GetBoundCharsForAction(bindings, actionName)
     -- Cannot support key modifiers at this point    
     -- todo filtering by eDevice == 1 and eModifier == 0
     
-    self.log:Debug("GetBoundCharsForAction(): " .. LuaUtils:DataDumper(binding))
+    -- self.log:Debug("GetBoundCharsForAction(): " .. LuaUtils:DataDumper(binding))
 
-    local boundChars =     {    
+    local boundChars = {    
         [1] = self.keyUtils:KeybindNCodeToChar(binding.arInputs[1].nCode),
         [2] = self.keyUtils:KeybindNCodeToChar(binding.arInputs[2].nCode)
     }
@@ -399,12 +424,28 @@ function ActionControls:SetMouseLock(lockState)
         self:SetLastTarget()
         GameLib.SetMouseLock(lockState)
 
+        -- EXPERIMENTAL --
         -- Automatic remapping of LMB/RMB to action 1/2 on camera lock - Does not work in combat :(
-        --if lockState then
-        --    self:BindMouseButtons()
-        --else
-        --    self:UnbindMouseButtons()
-        --end
+        if self.automaticMouseBinding then
+            local bindings = GameLib.GetKeyBindings()
+            try(function()
+                    if lockState then
+                        self:BindLmbMouseButton(bindings)
+                        self:BindRmbMouseButton(bindings, "DirectionalDash")
+                        self.mouseIsLmbBound = true
+                        self.mouseIsRmbBound = true
+                    else
+                        self:UnbindMouseButtons(bindings)
+                        self.mouseIsLmbBound = false
+                        self.mouseIsRmbBound = false
+                    end
+                    
+                    self.keyUtils:CommitBindings(bindings)
+                end,
+                function(e)
+                    self.log:Error(e)
+                end)
+        end
     end
 end
 
@@ -412,7 +453,7 @@ end
 -- World Click functions
 -----------------------------------------------------------------------------------------------
 function ActionControls:OnGameClickWorld(tPos)
-    if GameLib.IsMouseLockOn() then
+    if not self.mouseIsLmbBound and GameLib.IsMouseLockOn() then
         -- reselect units targeted before the mouse click
         GameLib.SetTargetUnit(self.lastTargetUnit)
         self:SetTargetLock(self.isLastTargetLocked)
@@ -750,7 +791,7 @@ function ActionControls:BindRmbMouseButton(bindings, actionName)
     self.keyUtils:Bind(actionName, 2, 2, 0, 1, true, bindings)
     self.isMouseRmbBound = true
     
-    self.log:Debug("Right mouse button bound to 'Directional dash'.")
+    self.log:Debug("Right mouse button bound to '%s'.", actionName)
 end
 
 function ActionControls:UnbindMouseButtons(bindings)

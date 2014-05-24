@@ -204,7 +204,7 @@ function KeyUtils:CommitBindings(bindings)
 	assert(not GameLib.GetPlayerUnit():IsInCombat(), "In combat, changing bindings is not possible at this moment.")
 
 	GameLib.SetKeyBindings(bindings)
-	self.log:Info("Bindings saved.")
+	self.log:Debug("Bindings saved.")
 end
 
 function KeyUtils:IsBound(eDevice, eModifier, nCode, bindings)
