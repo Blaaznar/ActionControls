@@ -1,5 +1,14 @@
 -- Helper functions for key mapping
 
+-- How to contribute and extend support for more keys: 
+-- 1. Start ActionControls debug mode with /ac-debug 
+-- 2. Press the keys the addon doesn't know how to handle
+-- 3. Type down the combination of the key you pressed and the code the addon gives you
+-- 4. Add the missing combinations to the systemKeyMap below
+
+-- extending nCodeMap requires more work (modifying bindings), 
+-- will write a function that will simplify that
+
 -- Character map for keyPress codes reported by SystemKeyDown event
 local systemKeyMap = { 
 	["Backspace"] = 8, ["Tab"] = 9, ["Shift"] = 16, ["Ctrl"] = 17, 
