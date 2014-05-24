@@ -777,6 +777,14 @@ function ActionControls:OnClose()
     self.wndMain:Close() -- hide the window
 end
 
+---------------------------------------------------------------------------------------------------
+-- TargetLockForm Functions
+---------------------------------------------------------------------------------------------------
+
+function ActionControls:OnBtnTargetLockedButtonSignal(wndHandler, wndControl, eMouseButton)
+	self:SetTargetLock(false)
+end
+
 -----------------------------------------------------------------------------------------------
 -- ActionControls Instance
 -----------------------------------------------------------------------------------------------
