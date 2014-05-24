@@ -162,6 +162,8 @@ function ActionControls:OnDocLoaded()
 		Apollo.RegisterEventHandler("MatchingGameReady",	"OnGameDialogInteraction", self)
 		Apollo.RegisterEventHandler("PVPMatchFinished",	"OnGameDialogInteraction", self)
 		Apollo.RegisterEventHandler("P2PTradeInvite",	"OnGameDialogInteraction", self)
+		Apollo.RegisterEventHandler("ProgressClickWindowDisplay",	"OnGameDialogInteraction", self)
+		
 				
 		-- Lock triggers
 		Apollo.RegisterEventHandler("SystemKeyDown", "OnSystemKeyDown", self) 
@@ -484,9 +486,9 @@ end
 function ActionControls:DisplayLockState(lockState)
 	-- TODO: Visual representation of target lock on target unit frame (i.e. lock icon or outline)
 	if lockState then
-		self.log:Info("MouseOver target lock set on '" .. GameLib.GetTargetUnit():GetName() .. "'.")
+		self.log:Info("MouseOver target lock set on <%s>", GameLib.GetTargetUnit():GetName())
 	else
-		self.log:Info("Removed target lock from '" .. GameLib.GetTargetUnit():GetName() .. "'.")
+		self.log:Info("Removed target lock from <%s>", GameLib.GetTargetUnit():GetName())
 	end
 end
 

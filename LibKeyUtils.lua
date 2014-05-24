@@ -34,6 +34,11 @@ local systemKeyMap = {
 	["["] = 219, ["\\"] = 220, ["]"] = 221, ["'"] = 222
 }
 
+local systemKeyMapInv = {}
+for k,v in ipairs(systemKeyMap) do 
+	table.insert(systemKeyMapInv, v, k) 
+end
+
 -- Key map for keybinding codes in keyBinding.arInputs[1].nCode
 local nCodeKeyMap = {
 	[1] = "Esc", [2] = "1", [3] = "2", [4] = "3", [5] = "4", [6] = "5",
@@ -165,7 +170,6 @@ function KeyUtils:UnbindByInput(eDevice, eModifier, nCode, bindings)
 			if arInput.eDevice == eDevice and arInput.nCode == nCode then
 				arInput.eDevice = 0
 				arInput.nCode = 0
-				Print(self:GetInputKeyName(eDevice, nCode))
 				self.log:Debug("Unbound '%s' from '%s'.", self:GetInputKeyName(eDevice, nCode), binding.strAction)
 			end
 		end
