@@ -529,6 +529,10 @@ end
 function ActionControls:DisplayLockState(lockState)
     if lockState then
         local targetForm = Apollo.FindWindowByName("ClusterTargetFlipped")
+        if targetForm == nil then
+            return
+        end
+        
 		self.wndTargetLock:SetAnchorPoints(targetForm:GetAnchorPoints())
 		self.wndTargetLock:SetAnchorOffsets(targetForm:GetAnchorOffsets())
     
