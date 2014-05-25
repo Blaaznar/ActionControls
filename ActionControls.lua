@@ -432,12 +432,12 @@ function ActionControls:SetMouseLock(lockState)
                     if lockState then
                         self:BindLmbMouseButton(bindings)
                         self:BindRmbMouseButton(bindings, "DirectionalDash")
-                        self.mouseIsLmbBound = true
-                        self.mouseIsRmbBound = true
+                        self.isMouseLmbBound = true
+                        self.isMouseRmbBound = true
                     else
                         self:UnbindMouseButtons(bindings)
-                        self.mouseIsLmbBound = false
-                        self.mouseIsRmbBound = false
+                        self.isMouseLmbBound = false
+                        self.isMouseRmbBound = false
                     end
                     
                     self.keyUtils:CommitBindings(bindings)
@@ -453,7 +453,7 @@ end
 -- World Click functions
 -----------------------------------------------------------------------------------------------
 function ActionControls:OnGameClickWorld(tPos)
-    if not self.mouseIsLmbBound and GameLib.IsMouseLockOn() then
+    if not self.isMouseLmbBound and GameLib.IsMouseLockOn() then
         -- reselect units targeted before the mouse click
         GameLib.SetTargetUnit(self.lastTargetUnit)
         self:SetTargetLock(self.isLastTargetLocked)
