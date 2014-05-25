@@ -304,28 +304,29 @@ function ActionControls:ReadKeyBindings()
     
     -- TODO: Pass a table with action names and get them all in one go
     self.boundKeys.mouseLockTriggerKeys = {
-        self:GetBoundCharsForAction(bindings, "MoveForward"),
-        self:GetBoundCharsForAction(bindings, "DashForward"),
-        self:GetBoundCharsForAction(bindings, "MoveBackward"),
-        self:GetBoundCharsForAction(bindings, "DashBackward"),
-        self:GetBoundCharsForAction(bindings, "DashLeft"),
-        self:GetBoundCharsForAction(bindings, "StrafeLeft"),
-        self:GetBoundCharsForAction(bindings, "TurnLeft"),
-        self:GetBoundCharsForAction(bindings, "DashRight"),
-        self:GetBoundCharsForAction(bindings, "StrafeRight"),
-        self:GetBoundCharsForAction(bindings, "TurnRight"),
-        self:GetBoundCharsForAction(bindings, "Jump"),
-        self:GetBoundCharsForAction(bindings, "ToggleAutoRun")
-    }
+        self:GetBoundCharsForAction(bindings, 
+			"MoveForward", 
+			"DashForward", 
+			"MoveBackward", 
+			"DashBackward", 
+			"DashLeft", 
+			"StrafeLeft", 
+			"TurnLeft", 
+			"DashRight", 
+			"StrafeRight", 
+			"TurnRight", 
+			"Jump", 
+			"ToggleAutoRun")
+    	}
     
     return bindings
 end
 
-function ActionControls:GetBoundCharsForAction(bindings, actionName)
-    local binding = self.keyUtils:GetBindingByActionName(bindings, actionName)
-
-    if binding == nil then
-        self.log:Debug("GetBoundCharsForAction(...) - no suitable bindings found for '" .. actionName .. "'")
+function ActionControls:GetBoundCharsForAction(bindings, ...)
+    local foundBindings = self.keyUtils:GetBindingByActionName(bindings, arg)
+	
+    if foundBindings == nil or table.getn(foundBindings) == 0 then
+        self.log:Debug("GetBoundCharsForAction(...) - no bindings found.")
         return nil
     end
     
@@ -333,13 +334,17 @@ function ActionControls:GetBoundCharsForAction(bindings, actionName)
     -- todo filtering by eDevice == 1 and eModifier == 0
     
     -- self.log:Debug("GetBoundCharsForAction(): " .. LuaUtils:DataDumper(binding))
-
-    local boundChars = {    
-        [1] = self.keyUtils:KeybindNCodeToChar(binding.arInputs[1].nCode),
-        [2] = self.keyUtils:KeybindNCodeToChar(binding.arInputs[2].nCode)
-    }
-    
-    return boundChars
+	local boundKeys = {}
+	for _, binding in ipairs(foundBindings) do
+		for j, arInput in ipairs(arInputs) do
+			if j > 2 then break end
+			
+			arInput.strKey = self.keyUtils:KeybindNCodeToChar(binding.arInput.nCode)
+			table.insert(boundKeys, binding.arInput)
+		end
+	end
+	    
+    return boundKeys
 end
 
 -------------------------------------------------------------------------------
@@ -382,9 +387,8 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
     end
 
     -- camera lock toggle
-    for _,keys in ipairs(self.boundKeys.mouseLockToggleKeys) do
-        if strKey == keys[1]
-        or strKey == keys[2] then
+    for _,key in ipairs(self.boundKeys.mouseLockToggleKeys) do
+        if strKey == key.strKey then
             self.log:Debug("OnSystemKeyDown(%s) - Manual toggle", sysKeyCode)
             self:ToggleMouseLock()
             return
@@ -395,10 +399,9 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
     if self.settings.mouseLockingType == EnumMouseLockingType.MovementKeys 
         and not self.isAutomaticMouseLockDelayed
     then
-        for _,keys in ipairs(self.boundKeys.mouseLockTriggerKeys) do
-            if strKey == keys[1] 
-            or strKey == keys[2] then
-                self.log:Debug("OnSystemKeyDown(%s) - Manual movement lock", sysKeyCode)
+        for _,key in ipairs(self.boundKeys.mouseLockTriggerKeys) do
+            if strKey == key.strKey then
+                self.log:Debug("OnSystemKeyDown(%s:'%s') - Manual movement lock", sysKeyCode, key.strKey)
                 self:SetMouseLock(true)
                 return
             end

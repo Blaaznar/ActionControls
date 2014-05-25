@@ -233,8 +233,24 @@ function KeyUtils:GetBinding(bindings, eDevice, eModifier, nCode)
 	end
 end
 
-function KeyUtils:GetBindingByActionName(bindings, actionName)
-	return table.FindItem(bindings, function(a) return a.strAction == actionName end)
+--function KeyUtils:GetBindingByActionName(bindings, actionName)
+--	return table.FindItem(bindings, function(a) return a.strAction == actionName end)
+--end
+
+function KeyUtils:GetBindingByActionName(bindings, ...)
+	assert(bindings, "Bindings not provided.")
+	assert(arg, "Action names list not provided.")
+
+	local foundBindings = {}
+	for _, binding in ipairs(bindings) do
+		for _, actionName in ipairs(arg) do
+			if a.strAction == actionName then
+				table.insert(foundBindings, binding)
+			end
+		end
+	end
+	
+	return foundBindings
 end
 
 -- Register Library
