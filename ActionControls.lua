@@ -298,13 +298,10 @@ function ActionControls:ReadKeyBindings()
     self.isMouseLmbBound = self.keyUtils:IsBound(bindings, 2, 0, 0)
     self.isMouseRmbBound = self.keyUtils:IsBound(bindings, 2, 0, 1)
     
-    self.boundKeys.mouseLockToggleKeys = {
-        self:GetBoundCharsForAction(bindings, "ExplicitMouseLook")
-    }
+    self.boundKeys.mouseLockToggleKeys = self:GetBoundKeysForAction(bindings, "ExplicitMouseLook")
     
     -- TODO: Pass a table with action names and get them all in one go
-    self.boundKeys.mouseLockTriggerKeys = {
-        self:GetBoundCharsForAction(bindings, 
+    self.boundKeys.mouseLockTriggerKeys = self:GetBoundKeysForAction(bindings, 
 			"MoveForward", 
 			"DashForward", 
 			"MoveBackward", 
@@ -317,12 +314,11 @@ function ActionControls:ReadKeyBindings()
 			"TurnRight", 
 			"Jump", 
 			"ToggleAutoRun")
-    	}
     
     return bindings
 end
 
-function ActionControls:GetBoundCharsForAction(bindings, ...)
+function ActionControls:GetBoundKeysForAction(bindings, ...)
     local foundBindings = self.keyUtils:GetBindingByActionName(bindings, arg)
 	
     if foundBindings == nil or table.getn(foundBindings) == 0 then
@@ -330,17 +326,17 @@ function ActionControls:GetBoundCharsForAction(bindings, ...)
         return nil
     end
     
-    -- Cannot support key modifiers at this point    
-    -- todo filtering by eDevice == 1 and eModifier == 0
-    
     -- self.log:Debug("GetBoundCharsForAction(): " .. LuaUtils:DataDumper(binding))
 	local boundKeys = {}
 	for _, binding in ipairs(foundBindings) do
 		for j, arInput in ipairs(arInputs) do
 			if j > 2 then break end
 			
-			arInput.strKey = self.keyUtils:KeybindNCodeToChar(binding.arInput.nCode)
-			table.insert(boundKeys, binding.arInput)
+			-- can support only keyboard for now
+			if arInput.eDevice == 1 then
+				arInput.strKey = self.keyUtils:KeybindNCodeToChar(arInput.nCode)
+				table.insert(boundKeys, arInput)
+			end
 		end
 	end
 	    
