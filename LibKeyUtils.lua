@@ -143,7 +143,7 @@ end
 
 -- TODO: parameters as tables
 
-function KeyUtils:Bind(actionName, index, eDevice, eModifier, nCode, unbindConflictingBindings, bindings)
+function KeyUtils:Bind(bindings, actionName, index, eDevice, eModifier, nCode, unbindConflictingBindings)
 	assert(not GameLib.GetPlayerUnit():IsInCombat(), "In combat, changing bindings is not possible at this moment.")
 	assert(bindings, "Bindings not provided.")
 	assert(index, "Binding index not provided.")
@@ -153,22 +153,22 @@ function KeyUtils:Bind(actionName, index, eDevice, eModifier, nCode, unbindConfl
 	local inputKeyName = self:GetInputKeyName(eDevice, nCode)
 		
 	if unbindConflictingBindings then
-		self:UnbindByInput(eDevice, eModifier, nCode, bindings)
+		self:UnbindByInput(bindings, eDevice, eModifier, nCode)
 	else
 		assert(not self:IsBound(bindings), 
 			self.log:Warn(inputKeyName .. " is already bound, please manually unbind it from the game's Keybind window."))
 	end
 	
-	local binding = self:GetBindingByActionName(actionName, bindings)
+	local binding = self:GetBindingByActionName(bindings, actionName)
 	binding.arInputs[index].eDevice = eDevice
 	binding.arInputs[index].nCode = nCode
 	
 	self.log:Debug("Bound binding for '%s' at index %s to: %s", actionName, tostring(index), inputKeyName)
 end
 
-function KeyUtils:Unbind(actionName, index, bindings)
+function KeyUtils:Unbind(bindings, actionName, index)
 	assert(bindings, "Bindings not provided.")
-	local binding = self:GetBindingByActionName(actionName, bindings)
+	local binding = self:GetBindingByActionName(bindings, actionName)
 
 	if index == nil then 
 		for _, i in ipairs(binding.arInputs) do
@@ -185,7 +185,7 @@ function KeyUtils:Unbind(actionName, index, bindings)
 	end
 end
 
-function KeyUtils:UnbindByInput(eDevice, eModifier, nCode, bindings)
+function KeyUtils:UnbindByInput(bindings, eDevice, eModifier, nCode)
 	assert(bindings, "Bindings not provided.")
 	
 	for _, binding in ipairs(bindings) do
@@ -207,7 +207,7 @@ function KeyUtils:CommitBindings(bindings)
 	self.log:Debug("Bindings saved.")
 end
 
-function KeyUtils:IsBound(eDevice, eModifier, nCode, bindings)
+function KeyUtils:IsBound(bindings, eDevice, eModifier, nCode)
 	if bindings == nil then bindings = GameLib.GetKeyBindings() end
 	
 	return table.ExistsItem(bindings, 
@@ -221,7 +221,7 @@ function KeyUtils:IsBound(eDevice, eModifier, nCode, bindings)
 		end)
 end
 
-function KeyUtils:GetBinding(eDevice, eModifier, nCode, bindings)
+function KeyUtils:GetBinding(bindings, eDevice, eModifier, nCode)
 	if bindings == nil then bindings = GameLib.GetKeyBindings() end
 	
 	for _, binding in ipairs(bindings) do
@@ -233,7 +233,7 @@ function KeyUtils:GetBinding(eDevice, eModifier, nCode, bindings)
 	end
 end
 
-function KeyUtils:GetBindingByActionName(actionName, bindings)
+function KeyUtils:GetBindingByActionName(bindings, actionName)
 	return table.FindItem(bindings, function(a) return a.strAction == actionName end)
 end
 

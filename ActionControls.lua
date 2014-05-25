@@ -295,8 +295,8 @@ function ActionControls:ReadKeyBindings()
     local bindings = GameLib.GetKeyBindings();
     
     -- check if mouse buttons are bound to any action
-    self.isMouseLmbBound = self.keyUtils:IsBound(2, 0, 0, bindings)
-    self.isMouseRmbBound = self.keyUtils:IsBound(2, 0, 1, bindings)
+    self.isMouseLmbBound = self.keyUtils:IsBound(bindings, 2, 0, 0)
+    self.isMouseRmbBound = self.keyUtils:IsBound(bindings, 2, 0, 1)
     
     self.boundKeys.mouseLockToggleKeys = {
         self:GetBoundCharsForAction(bindings, "ExplicitMouseLook")
@@ -322,7 +322,7 @@ function ActionControls:ReadKeyBindings()
 end
 
 function ActionControls:GetBoundCharsForAction(bindings, actionName)
-    local binding = self.keyUtils:GetBindingByActionName(actionName, bindings)
+    local binding = self.keyUtils:GetBindingByActionName(bindings, actionName)
 
     if binding == nil then
         self.log:Debug("GetBoundCharsForAction(...) - no suitable bindings found for '" .. actionName .. "'")
@@ -607,17 +607,17 @@ function ActionControls:GenerateModel()
     
     self.model.settings = table.ShallowCopy(self.settings)
     self.model.explicitMouseLook = {} 
-    self.model.bindingExplicitMouseLook = KeyUtils:GetBindingByActionName("ExplicitMouseLook", bindings)
+    self.model.bindingExplicitMouseLook = KeyUtils:GetBindingByActionName(bindings, "ExplicitMouseLook")
     self.model.explicitMouseLook.nCode = self.model.bindingExplicitMouseLook.arInputs[1].nCode
     
     self.model.isMouseLmbBound = self.isMouseLmbBound
     if self.isMouseLmbBound then
-        self.model.bindingLmb = KeyUtils:GetBinding(2, 0, 0, bindings)
+        self.model.bindingLmb = KeyUtils:GetBinding(bindings, 2, 0, 0)
     end
     
     self.model.isMouseRmbBound = self.isMouseRmbBound
     if self.isMouseRmbBound then
-        self.model.bindingRmb = KeyUtils:GetBinding(2, 0, 1, bindings)
+        self.model.bindingRmb = KeyUtils:GetBinding(bindings, 2, 0, 1)
         self.model.rmbActionName = self.model.bindingRmb.strAction
     end
 end
@@ -719,9 +719,9 @@ function ActionControls:IsKeyAlreadyBound(eDevice, eModifier, nCode)
 
     local isBound, binding = try(
         function ()
-            local isBound = self.keyUtils:IsBound(eDevice, eModifier, nCode)
+            local isBound = self.keyUtils:IsBound(nil, eDevice, eModifier, nCode)
             if isBound then
-                local existingBinding = self.keyUtils:GetBinding(eDevice, eModifier, nCode)
+                local existingBinding = self.keyUtils:GetBinding(nil, eDevice, eModifier, nCode)
                 self.log:Info("Key '%s' is already bound to '%s'", tostring(key), tostring(existingBinding.strActionLocalized))
                 return 
                     true,
@@ -754,15 +754,9 @@ function ActionControls:OnOK()
             end
             
             if self.model.explicitMouseLook.nCode ~= nil 
-                and self.model.explicitMouseLook.nCode ~= KeyUtils:GetBindingByActionName("ExplicitMouseLook", bindings).arInputs[1].nCode then
+                and self.model.explicitMouseLook.nCode ~= KeyUtils:GetBindingByActionName(bindings, "ExplicitMouseLook").arInputs[1].nCode then
                 local key = self.model.explicitMouseLook
-                self.keyUtils:Bind("ExplicitMouseLook", 
-                    1, 
-                    1, --key.eDevice, 
-                    0, --key.eModifier, 
-                    key.nCode, 
-                    true,
-                    bindings)
+                self.keyUtils:Bind(bindings, "ExplicitMouseLook", 1, 1, 0, key.nCode, true)
             end
             
             self.keyUtils:CommitBindings(bindings)
@@ -781,22 +775,22 @@ end
 
 -- Binding
 function ActionControls:BindLmbMouseButton(bindings)
-    self.keyUtils:Bind("LimitedActionSet1", 2, 2, 0, 0, true, bindings)
+    self.keyUtils:Bind(bindings, "LimitedActionSet1", 2, 2, 0, 0, true)
     self.isMouseLmbBound = true
     
     self.log:Debug("Left mouse button bound to 'Action 1'.")
 end
 
 function ActionControls:BindRmbMouseButton(bindings, actionName)
-    self.keyUtils:Bind(actionName, 2, 2, 0, 1, true, bindings)
+    self.keyUtils:Bind(bindings, actionName, 2, 2, 0, 1, true)
     self.isMouseRmbBound = true
     
     self.log:Debug("Right mouse button bound to '%s'.", actionName)
 end
 
 function ActionControls:UnbindMouseButtons(bindings)
-    self.keyUtils:UnbindByInput(2, 0, 0, bindings) -- LMB
-    self.keyUtils:UnbindByInput(2, 0, 1, bindings) -- RMB
+    self.keyUtils:UnbindByInput(bindings, 2, 0, 0) -- LMB
+    self.keyUtils:UnbindByInput(bindings, 2, 0, 1) -- RMB
     
     self.isMouseLmbBound = false
     self.isMouseRmbBound = false
