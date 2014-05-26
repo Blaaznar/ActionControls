@@ -46,8 +46,6 @@ function ActionControls:new(logInst, keyUtilsInst)
     o.log = logInst
     o.keyUtils = keyUtilsInst
     
-    
-    o.isAutomaticMouseLockDelayed = false
     o.immediateMouseOverUnit = nil
     o.lastTargetUnit = nil
     o.isTargetLocked = false
@@ -424,7 +422,6 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
     
     -- automatic camera locking
     if self.settings.mouseLockingType == EnumMouseLockingType.MovementKeys 
-        and not self.isAutomaticMouseLockDelayed
         and not self:IsBlockingWindowOpen()
     then
         for _,key in ipairs(self.boundKeys.mouseLockTriggerKeys) do
