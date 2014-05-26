@@ -58,6 +58,7 @@ function ActionControls:new(logInst, keyUtilsInst)
     
     -- Experimental
     o.automaticMouseBinding = false
+    o.blockingWindows = {}
     
     return o
 end
@@ -86,7 +87,34 @@ function ActionControls:OnLoad()
 end
 
 function ActionControls:GetAsyncLoadStatus()
+    self.blockingWindows = self:GetBlockingWindowsFromStrata()
+    
     return Apollo.AddonLoadStatus.Loaded
+end
+
+-- Thanks to Xeurian for this code
+function ActionControls:GetBlockingWindows()
+    local windowList = {}
+	for _,strata in ipairs(Apollo.GetStrata()) do
+		for _,window in ipairs(Apollo.GetWindowsInStratum(strata)) do
+			if window:IsStyleOn("Escapable") 
+            and not window:IsStyleOn("CloseOnExternalClick") 
+            then
+				table.insert(windowList, window)
+			end
+		end
+	end
+end
+
+function ActionControls:IsBlockingWindowOpen()
+    for _, window in self.blockingWindows do
+        if window:IsShown() then
+            self.log:Info("Automatic mouse look blocked by '%': ", window:GetName())
+            return true
+        end
+    end
+    
+    return false
 end
 
 -----------------------------------------------------------------------------------------------
@@ -178,10 +206,6 @@ function ActionControls:OnDocLoaded()
             "PVPMatchFinished",
             "P2PTradeInvite",
             "ProgressClickWindowDisplay")
-        
-        Apollo.RegisterTimerHandler("GameDialogTimer", "OnGameDialogTimer", self)
-        Apollo.CreateTimer("GameDialogTimer", 0.3, false)
-        Apollo.StopTimer("GameDialogTimer")
         
         -- Lock triggers
         Apollo.RegisterEventHandler("SystemKeyDown", "OnSystemKeyDown", self) 
@@ -300,7 +324,6 @@ function ActionControls:ReadKeyBindings()
     
     self.boundKeys.mouseLockToggleKeys = self:GetBoundKeysForAction(bindings, "ExplicitMouseLook")
     
-    -- TODO: Pass a table with action names and get them all in one go
     self.boundKeys.mouseLockTriggerKeys = self:GetBoundKeysForAction(bindings, 
 			"MoveForward", 
 			"DashForward", 
@@ -347,6 +370,8 @@ end
 -- Key press processing
 -------------------------------------------------------------------------------
 function ActionControls:OnSystemKeyDown(sysKeyCode)
+    --self.log:Info(LuaUtils:DataDumper(self.blockingWindows))
+
     local strKey = self.keyUtils:SysKeyCodeToChar(sysKeyCode)
     --self.log:Debug("OnSystemKeyDown(%s): %s", sysKeyCode, tostring(strKey))
     
@@ -394,6 +419,7 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
     -- automatic camera locking
     if self.settings.mouseLockingType == EnumMouseLockingType.MovementKeys 
         and not self.isAutomaticMouseLockDelayed
+        and not self:IsBlockingWindowOpen()
     then
         for _,key in ipairs(self.boundKeys.mouseLockTriggerKeys) do
             if strKey == key.strKey then
@@ -489,14 +515,8 @@ end
 
 function ActionControls:OnGameDialog()
     -- TODO: Trigger only on window shown, not off
+    self.log:Debug("OnGameDialog()")
     self:SetMouseLock(false)
-    self.isAutomaticMouseLockDelayed = true
-    Apollo.StartTimer("GameDialogTimer")
-end
-
-function ActionControls:OnGameDialogTimer()
-    self.log:Debug("OnGameDialogTimer()")
-    self.isAutomaticMouseLockDelayed = false
 end
 
 --------------------------------------------------------------------------
