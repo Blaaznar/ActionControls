@@ -143,27 +143,33 @@ end
 
 -- TODO: parameters as tables
 
-function KeyUtils:Bind(bindings, actionName, index, eDevice, eModifier, nCode, unbindConflictingBindings)
+function KeyUtils:Bind(bindings, actionName, index, inputKey, unbindConflictingBindings)
 	assert(not GameLib.GetPlayerUnit():IsInCombat(), "In combat, changing bindings is not possible at this moment.")
 	assert(bindings, "Bindings not provided.")
 	assert(index, "Binding index not provided.")
-	assert(eDevice, "Binding eDevice not provided.")
-	assert(nCode, "Binding nCode not provided.")
+	assert(inputKey.eDevice, "Binding eDevice not provided.")
+    assert(inputKey.eModifier, "Binding eModifier not provided.")
+	assert(inputKey.nCode, "Binding nCode not provided.")
 	
-	local inputKeyName = self:GetInputKeyName(eDevice, nCode)
+	local inputKeyName = self:GetInputKeyName(eDevice, inputKey.nCode)
 		
 	if unbindConflictingBindings then
-		self:UnbindByInput(bindings, eDevice, eModifier, nCode)
+		self:UnbindByInput(bindings, inputKey.eDevice, inputKey.eModifier, inputKey.nCode)
 	else
 		assert(not self:IsBound(bindings), 
 			self.log:Warn(inputKeyName .. " is already bound, please manually unbind it from the game's Keybind window."))
 	end
 	
 	local binding = self:GetBindingByActionName(bindings, actionName)
-	binding.arInputs[index].eDevice = eDevice
-	binding.arInputs[index].nCode = nCode
-	
-	self.log:Debug("Bound binding for '%s' at index %s to: %s", actionName, tostring(index), inputKeyName)
+    if binding ~= nil then
+        binding.arInputs[index].eDevice = inputKey.eDevice
+        binding.arInputs[index].eModifier = inputKey.eModifier
+        binding.arInputs[index].nCode = inputKey.nCode
+        
+        self.log:Debug("Bound binding for '%s' at index %s to: %s", actionName, tostring(index), inputKeyName)
+    else
+        self.log:Debug("Binding '%s' not found.", actionName)
+    end
 end
 
 function KeyUtils:Unbind(bindings, actionName, index)
@@ -173,25 +179,34 @@ function KeyUtils:Unbind(bindings, actionName, index)
 	if index == nil then 
 		for _, i in ipairs(binding.arInputs) do
 			binding.arInputs[i].eDevice = 0
+            binding.arInputs[i].eModifier = 0
 			binding.arInputs[i].nCode = 0    
 		end		
 
 		self.log:Debug("Unbound binding for '%s' at index %s.", actionName, tostring(i))
 	else 
 		binding.arInputs[index].eDevice = 0
+        binding.arInputs[index].eModifier = 0        
 		binding.arInputs[index].nCode = 0
 		
 		self.log:Debug("Unbound binding for '%s' at index %s.", actionName, tostring(index))
 	end
 end
 
-function KeyUtils:UnbindByInput(bindings, eDevice, eModifier, nCode)
+function KeyUtils:UnbindByInput(bindings, inputKey)
 	assert(bindings, "Bindings not provided.")
-	
+	assert(inputKey.eDevice, "Binding eDevice not provided.")
+    assert(inputKey.eModifier, "Binding eModifier not provided.")
+	assert(inputKey.nCode, "Binding nCode not provided.")
+    
 	for _, binding in ipairs(bindings) do
 		for _, arInput in ipairs(binding.arInputs) do
-			if arInput.eDevice == eDevice and arInput.nCode == nCode then
+			if arInput.eDevice == inputKey.eDevice 
+            and arInput.eModifier == inputKey.eModifier
+            and arInput.nCode == inputKey.nCode 
+            then
 				arInput.eDevice = 0
+                arInput.eModifier = 0
 				arInput.nCode = 0
 				self.log:Debug("Unbound '%s' from '%s'.", self:GetInputKeyName(eDevice, nCode), binding.strAction)
 			end
@@ -207,30 +222,29 @@ function KeyUtils:CommitBindings(bindings)
 	self.log:Debug("Bindings saved.")
 end
 
-function KeyUtils:IsBound(bindings, eDevice, eModifier, nCode)
-	if bindings == nil then bindings = GameLib.GetKeyBindings() end
-	
-	return table.ExistsItem(bindings, 
-		function (binding)
-			return 
-				table.ExistsItem(binding.arInputs, 
-					function (arInput) 
-						return 
-							arInput.eDevice == eDevice and arInput.eModifier == eModifier and arInput.nCode == nCode
-					end)
-		end)
+function KeyUtils:IsBound(bindings, inputKey)
+	return self:GetBinding(bindings, inputKey) ~= nil
 end
 
-function KeyUtils:GetBinding(bindings, eDevice, eModifier, nCode)
+function KeyUtils:GetBinding(bindings, inputKey)
+	assert(inputKey.eDevice, "Binding eDevice not provided.")
+    assert(inputKey.eModifier, "Binding eModifier not provided.")
+	assert(inputKey.nCode, "Binding nCode not provided.")
+
 	if bindings == nil then bindings = GameLib.GetKeyBindings() end
 	
 	for _, binding in ipairs(bindings) do
 		for _, arInput in ipairs(binding.arInputs) do
-			if arInput.eDevice == eDevice and arInput.eModifier == eModifier and arInput.nCode == nCode then
+			if arInput.eDevice == inputKey.eDevice 
+            and arInput.eModifier == inputKey.eModifier 
+            and arInput.nCode == inputKey.nCode 
+            then
 				return binding
 			end
 		end
 	end
+    
+    return nil
 end
 
 --function KeyUtils:GetBindingByActionName(bindings, actionName)
