@@ -93,24 +93,26 @@ function KeyUtils:new(logInst)
     return o
 end
 
-function KeyUtils:GetInputKeyName(eDevice, nCode)
-	local eModifier = 0
-
-	if eDevice == 2 then
-		return "Mouse button " .. tostring(nCode + 1)
-	elseif eDevice == 1 then
-		local keyName = self:KeybindNCodeToChar(nCode)
+function KeyUtils:GetInputKeyName(inputKey)
+	assert(inputKey.eDevice, "Binding eDevice not provided.")
+    assert(inputKey.eModifier, "Binding eModifier not provided.")
+	assert(inputKey.nCode, "Binding nCode not provided.")
+    
+	if inputKey.eDevice == 2 then
+		return "Mouse button " .. tostring(inputKey.nCode + 1)
+	elseif inputKey.eDevice == 1 then
+		local keyName = self:KeybindNCodeToChar(inputKey.nCode)
 		
 		if keyName ~= nil then
-			if eModifier == 0 then
-				return nCodeKeyMap[nCode]
+			if inputKey.eModifier == 0 then
+				return nCodeKeyMap[inputKey.nCode]
 			else
 				local modifier
-				if eModifier == 1 then
+				if inputKey.eModifier == 1 then
 					modifier = "Shift"
-				elseif eModifier == 2 then
+				elseif inputKey.eModifier == 2 then
 					modifier = "Ctrl"
-				elseif eModifier == 4 then
+				elseif inputKey.eModifier == 4 then
 					modifier = "Alt"
 				else
 					modifier = "Unknown"
@@ -120,8 +122,10 @@ function KeyUtils:GetInputKeyName(eDevice, nCode)
 		else
 			return "Unknown key"
 		end
+    elseif inputKey.eDevice == 0 then
+        return "Key not bound"
 	else
-		return "Unknown"
+		return "Unknown device/key"
 	end
 end
 
@@ -141,8 +145,6 @@ function KeyUtils:SysKeyCodeToChar(sysKeyCode)
 	return systemKeyMapInv[sysKeyCode]
 end
 
--- TODO: parameters as tables
-
 function KeyUtils:Bind(bindings, actionName, index, inputKey, unbindConflictingBindings)
 	assert(not GameLib.GetPlayerUnit():IsInCombat(), "In combat, changing bindings is not possible at this moment.")
 	assert(bindings, "Bindings not provided.")
@@ -151,7 +153,7 @@ function KeyUtils:Bind(bindings, actionName, index, inputKey, unbindConflictingB
     assert(inputKey.eModifier, "Binding eModifier not provided.")
 	assert(inputKey.nCode, "Binding nCode not provided.")
 	
-	local inputKeyName = self:GetInputKeyName(eDevice, inputKey.nCode)
+	local inputKeyName = self:GetInputKeyName(inputKey)
 		
 	if unbindConflictingBindings then
 		self:UnbindByInput(bindings, inputKey.eDevice, inputKey.eModifier, inputKey.nCode)
@@ -246,10 +248,6 @@ function KeyUtils:GetBinding(bindings, inputKey)
     
     return nil
 end
-
---function KeyUtils:GetBindingByActionName(bindings, actionName)
---	return table.FindItem(bindings, function(a) return a.strAction == actionName end)
---end
 
 function KeyUtils:GetBindingByActionName(bindings, ...)
 	assert(bindings, "Bindings not provided.")
