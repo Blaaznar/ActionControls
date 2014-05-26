@@ -391,7 +391,7 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
     -- modifiers not properly supported yet
     if Apollo.IsAltKeyDown() 
     or Apollo.IsControlKeyDown() 
-    --or Apollo.IsShiftKeyDown() 
+    --or Apollo.IsShiftKeyDown() -- TODO: properly read which modifier is the sprint modifier
     then
         return
     end
@@ -404,9 +404,7 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
     end
 
     -- target locking
-	if strKey == "Esc" then
-		--self:SetTargetLock(false) -- so the target lock window doesn't stay shown
-	elseif strKey == self.settings.mouseOverTargetLockKey then
+	if strKey == self.settings.mouseOverTargetLockKey then
         if GameLib.GetTargetUnit() ~= nil then
             self:SetTargetLock(not self:GetTargetLock())
         else
@@ -415,7 +413,7 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
         return
     end
 
-    -- camera lock toggle
+    -- mouse look toggle
     for _,key in ipairs(self.boundKeys.mouseLockToggleKeys) do
         if strKey == key.strKey then
             self.log:Debug("OnSystemKeyDown(%s) - Manual toggle", sysKeyCode)
