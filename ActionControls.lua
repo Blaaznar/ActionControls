@@ -206,7 +206,6 @@ function ActionControls:OnDocLoaded()
         Apollo.RegisterTimerHandler("DelayedMouseOverTargetTimer", "OnDelayedMouseOverTargetTimer", self)
         Apollo.CreateTimer("DelayedMouseOverTargetTimer", 0.3, false)
         Apollo.StopTimer("DelayedMouseOverTargetTimer")
-        self:SetTargetLock(false)
         
         -- Keybinding events
         Apollo.RegisterEventHandler("KeyBindingKeyChanged", "OnKeyBindingKeyChanged", self)
@@ -214,8 +213,9 @@ function ActionControls:OnDocLoaded()
         
         -- Additional Addon initialization
         self:ReadKeyBindings()
-        
-        self:InitializeDetection()
+
+        self:SetTargetLock(false)        
+        self:SetLock(false)
     end
 end
 
@@ -349,17 +349,6 @@ end
 -- Key press processing
 -------------------------------------------------------------------------------
 function ActionControls:OnSystemKeyDown(sysKeyCode)
-    --local inputKey = InputKey:newFromSysKeyCode(sysKeyCode)
-
-    local strKey = self.keyUtils:SysKeyCodeToChar(sysKeyCode)
-    --self.log:Debug("OnSystemKeyDown(%s): %s", sysKeyCode, tostring(strKey))
-    
-    if strKey == nil then
-        self.log:Debug("Unknown key code (%s), please report it to addon author.", sysKeyCode)
-        return
-    end
-    
-
     -- modifiers not properly supported yet
     if Apollo.IsAltKeyDown() 
     or Apollo.IsControlKeyDown() 
@@ -375,11 +364,22 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
         return
     end
 
+    --local inputKey = InputKey:newFromSysKeyCode(sysKeyCode)
+
+    local strKey = self.keyUtils:SysKeyCodeToChar(sysKeyCode)
+    --self.log:Debug("OnSystemKeyDown(%s): %s", sysKeyCode, tostring(strKey))
+    
+    if strKey == nil then
+        self.log:Debug("Unknown key code (%s), please report it to addon author.", sysKeyCode)
+        return
+    end
+    
 	-- Esc key cleanups
 	if strKey == "Esc" then
 		if self.settings.automaticMouseBinding then
 			self:AutoBinding(false)
 		end
+        return
 	end
 
     -- target locking
@@ -419,17 +419,11 @@ end
 -----------------------------------------------------------------------------------------------
 -- MouseLocking functions
 -----------------------------------------------------------------------------------------------
-function ActionControls:InitializeDetection(lockState)
-    if lockState == nil then lockState = GameLib.IsMouseLockOn() end
-end
-
 function ActionControls:ToggleMouseLock()
     self:SetMouseLock(not GameLib.IsMouseLockOn())
 end
 
 function ActionControls:SetMouseLock(lockState) 
-    self:InitializeDetection(lockState)
-
     if lockState ~= GameLib.IsMouseLockOn() then
         self:SetLastTarget()
         GameLib.SetMouseLock(lockState)
@@ -474,6 +468,8 @@ end
 -- World Click functions
 -----------------------------------------------------------------------------------------------
 function ActionControls:OnGameClickWorld(tPos)
+    self.log:Debug("OnGameClickWorld(%s)", tostring(tPos))
+    
     if GameLib.IsMouseLockOn() then
         -- reselect units targeted before the mouse click
         GameLib.SetTargetUnit(self.lastTargetUnit)
@@ -808,8 +804,6 @@ function ActionControls:OnOK()
             self:OnClose()
             
             self:ReadKeyBindings()
-            
-            self:InitializeDetection()
         end,
         function(e)
             self.log:Error(e)
