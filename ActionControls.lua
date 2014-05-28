@@ -474,12 +474,14 @@ end
 -- World Click functions
 -----------------------------------------------------------------------------------------------
 function ActionControls:OnGameClickWorld(tPos)
-    if not self.isMouseLmbBound and GameLib.IsMouseLockOn() then
+    if GameLib.IsMouseLockOn() then
         -- reselect units targeted before the mouse click
         GameLib.SetTargetUnit(self.lastTargetUnit)
         self:SetTargetLock(self.isLastTargetLocked)
 
-        self:SetMouseLock(false)
+        if not self.isMouseBound then
+            self:SetMouseLock(false)
+        end
     end
 end
 
