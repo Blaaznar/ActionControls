@@ -129,7 +129,6 @@ function ActionControls:OnDocLoaded()
         Apollo.RegisterSlashCommand("AC", "OnActionControlsOn", self)
         Apollo.RegisterSlashCommand("ActionControls", "OnActionControlsOn", self)
         Apollo.RegisterSlashCommand("ac-debug", "OnActionControlsOnDebug", self)
-        Apollo.RegisterSlashCommand("ac-autobind", "OnActionControlsOnAutoBind", self)
         
         -- Unlock triggers - general unlocking
         self:RegisterEvents("OnGameDialogInteraction", 
@@ -272,19 +271,6 @@ end
 -- on SlashCommand "/ac-debug"
 function ActionControls:OnActionControlsOnDebug()
     self.log:SetLogLevel(4)
-end
-
--- on SlashCommand "/ac-autobind"
-function ActionControls:OnActionControlsOnAutoBind()
-    self.settings.automaticMouseBinding = not self.settings.automaticMouseBinding
-    
-    if self.settings.automaticMouseBinding then
-        self.log:Warn("Automatic mouse binding turned on. Your mouse buttons will now automatically rebind to Action1/Dodge only when mouse look is enabled.")
-        self.log:Warn("This feature is experimental and will not be able to switch bindings once your character is in combat.")
-        self.log:Warn("If you like it, petition Carbine to allow this kind of functionality in combat.")
-    end
-    
-    self:SetMouseLock(false)
 end
 
 -----------------------------------------------------------------------------------------------
