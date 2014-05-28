@@ -807,6 +807,8 @@ function ActionControls:OnOK()
             
             self:OnClose()
             
+            self:ReadKeyBindings()
+            
             self:InitializeDetection()
         end,
         function(e)
