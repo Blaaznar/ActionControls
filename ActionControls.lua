@@ -11,6 +11,7 @@ require "GameLib"
 local KeyUtils = Apollo.GetPackage("Blaz:Lib:KeyUtils-0.2").tPackage
 local LuaUtils = Apollo.GetPackage("Blaz:Lib:LuaUtils-0.1").tPackage
 local SimpleLog = Apollo.GetPackage("Blaz:Lib:SimpleLog-0.1").tPackage
+local InputKey = Apollo.GetPackage("Blaz:Lib:InputKey-0.1").tPackage
 
 -----------------------------------------------------------------------------------------------
 -- Constants
@@ -59,13 +60,13 @@ function ActionControls:new(logInst, keyUtilsInst)
 
     o.settings = {
         mouseLockingType = EnumMouseLockingType.MovementKeys,
-        mouseOverTargetLockKey = nil
+        mouseOverTargetLockKey = nil,
+
+		-- experimental
+		automaticMouseBinding = false
     }
     
     o.model = {}
-    
-    -- Experimental
-    o.automaticMouseBinding = false
     
     return o
 end
@@ -273,9 +274,9 @@ end
 
 -- on SlashCommand "/ac-autobind"
 function ActionControls:OnActionControlsOnAutoBind()
-    self.automaticMouseBinding = not self.automaticMouseBinding
+    self.settings.automaticMouseBinding = not self.settings.automaticMouseBinding
     
-    if self.automaticMouseBinding then
+    if self.settings.automaticMouseBinding then
         self.log:Warn("Automatic mouse binding turned on. Your mouse buttons will now automatically rebind to Action1/Dodge only when mouse look is enabled.")
         self.log:Warn("This feature is experimental and will not be able to switch bindings once your character is in combat.")
         self.log:Warn("If you like it, petition Carbine to allow this kind of functionality in combat.")
@@ -326,7 +327,7 @@ function ActionControls:ReadKeyBindings()
 end
 
 function ActionControls:GetBoundKeysForAction(bindings, ...)
-    local foundBindings = self.keyUtils:GetBindingByActionName(bindings, arg)
+    local foundBindings = self.keyUtils:GetBindingListByActionNames(bindings, unpack(arg))
 	
     if foundBindings == nil or table.getn(foundBindings) == 0 then
         self.log:Debug("GetBoundCharsForAction(...) - no bindings found.")
@@ -336,7 +337,7 @@ function ActionControls:GetBoundKeysForAction(bindings, ...)
     -- self.log:Debug("GetBoundCharsForAction(): " .. LuaUtils:DataDumper(binding))
 	local boundKeys = {}
 	for _, binding in ipairs(foundBindings) do
-		for j, arInput in ipairs(arInputs) do
+		for j, arInput in ipairs(binding.arInputs) do
 			if j > 2 then break end
 			
 			-- can support only keyboard for now
@@ -354,6 +355,8 @@ end
 -- Key press processing
 -------------------------------------------------------------------------------
 function ActionControls:OnSystemKeyDown(sysKeyCode)
+    --local inputKey = InputKey:newFromSysKeyCode(sysKeyCode)
+
     local strKey = self.keyUtils:SysKeyCodeToChar(sysKeyCode)
     --self.log:Debug("OnSystemKeyDown(%s): %s", sysKeyCode, tostring(strKey))
     
@@ -362,6 +365,7 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
         return
     end
     
+
     -- modifiers not properly supported yet
     if Apollo.IsAltKeyDown() 
     or Apollo.IsControlKeyDown() 
@@ -430,7 +434,7 @@ function ActionControls:SetMouseLock(lockState)
 
         -- EXPERIMENTAL --
         -- Automatic remapping of LMB/RMB to action 1/2 on camera lock - Does not work in combat :(
-        if self.automaticMouseBinding then
+        if self.settings.automaticMouseBinding then
             local bindings = GameLib.GetKeyBindings()
             try(function()
                     if lockState then
@@ -624,6 +628,8 @@ function ActionControls:GenerateModel()
         self.model.bindingRmb = self.keyUtils:GetBinding(bindings, EnumInputKeys.RMB)
         self.model.rmbActionName = self.model.bindingRmb.strAction
     end
+
+	self.model.settings.automaticMouseBinding = self.settings.automaticMouseBinding
 end
 
 function ActionControls:GenerateView()
@@ -637,13 +643,16 @@ function ActionControls:GenerateView()
 
     self.wndMain:FindChild("BtnTargetLockKey"):SetText(tostring(self.model.settings.mouseOverTargetLockKey or ""))
     
-    self.wndMain:FindChild("BindMouseButtons"):Enable(not self.model.isMouseLmbBound)
-    self.wndMain:FindChild("UnBindMouseButtons"):Enable(self.model.isMouseLmbBound)
+    self.wndMain:FindChild("BtnBindMouseButtons"):SetCheck(self.model.isMouseLmbBound)
+    
+    self.wndMain:FindChild("BtnAutoBindMouseButtons"):Enable(self.model.isMouseLmbBound)
+    self.wndMain:FindChild("BtnAutoBindMouseButtons"):SetCheck(self.model.settings.automaticMouseBinding)
 end
 
------------------------------------------------------------------------------------------------
--- ActionControls Form functions
------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+-- ActionControlsForm Functions
+---------------------------------------------------------------------------------------------------
+
 function ActionControls:OnRbKeyLockingCheck( wndHandler, wndControl, eMouseButton )
     self.model.settings.mouseLockingType = EnumMouseLockingType.MovementKeys
     self:GenerateView()
@@ -654,22 +663,40 @@ function ActionControls:OnRbKeyLockingUncheck( wndHandler, wndControl, eMouseBut
     self:GenerateView()
 end
 
-function ActionControls:OnBindMouseButtonsSignal( wndHandler, wndControl, eMouseButton )
-    self.model.isMouseLmbBound = true
+function ActionControls:OnBtnBindMouseButtons_ButtonCheck( wndHandler, wndControl, eMouseButton )
+	self.model.isMouseLmbBound = true
     
-     -- TODO: split to other button
+    -- TODO: split to other button
     self.model.isMouseRmbBound = true
     self.model.rmbActionName = "DirectionalDash"
     -------------------------------
+
+	self.model.settings.automaticMouseBinding = false
     
     self:GenerateView()
 end
 
-function ActionControls:OnUnBindMouseButtonsSignal( wndHandler, wndControl, eMouseButton )
-    self.model.isMouseLmbBound = false
+function ActionControls:OnBtnBindMouseButtons_ButtonUncheck( wndHandler, wndControl, eMouseButton )
+	self.model.isMouseLmbBound = false
     self.model.isMouseRmbBound = false
     self.model.rmbActionName = ""
+
+	self.model.settings.automaticMouseBinding = false
+	
     self:GenerateView()
+end
+
+-- Automatic binding
+function ActionControls:OnBtnAutoBindMouseButtons_ButtonCheck( wndHandler, wndControl, eMouseButton )
+	self.model.settings.automaticMouseBinding = true
+	
+	self:GenerateView()
+end
+
+function ActionControls:OnBtnAutoBindMouseButtons_ButtonUncheck( wndHandler, wndControl, eMouseButton )
+	self.model.settings.automaticMouseBinding = false
+	
+	self:GenerateView()
 end
 
 -- Key capture

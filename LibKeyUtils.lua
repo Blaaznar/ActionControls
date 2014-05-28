@@ -80,6 +80,101 @@ for k,v in pairs(nCodeKeyMap) do
 	nCodeKeyMapInv[v] = k 
 end
 
+local InputKey = {}
+
+function InputKey:new(o)
+    o = {} or o
+    setmetatable(o, self)
+    self.__index = self 
+    self.__eq = function (a,b) return a.eDevice == b.eDevice and a.eModifier == b.eModifier and a.nCode == b.nCode end
+end
+
+function InputKey:newFromArInput(arInput)
+    o = InputKey:new()
+
+    -- initialize variables here
+    o.eDevice = arInput.eDevice
+    o.eModifier = arInput.eModifier
+    o.nCode = arInput.nCode
+    o.strKey = nCodeKeyMap[arInput.nCode]
+    
+    return o
+end
+
+function InputKey:newFromKeyParams(eDevice, eModifier, nCode)
+    o = InputKey:new()
+
+    -- initialize variables here
+    o.eDevice = eDevice
+    o.eModifier = eModifier
+    o.nCode = nCode
+    o.strKey = nCodeKeyMap[nCode]
+    
+    return o
+end
+
+function InputKey:newFromSysKeyCode(sysKeyCode) -- TODO: how to chain constructors?
+    o = InputKey:new()
+
+    -- initialize variables here
+    o.eDevice = eDevice
+    o.eModifier = eModifier
+    if Apollo.IsAltKeyDown() then
+        o.eModifier = 1
+    elseif Apollo.IsControlKeyDown() then
+        o.eModifier = 2
+    elseif Apollo.IsAltKeyDown() then
+        o.eModifier = 4
+    else
+        o.eModifier = 0
+    end
+    
+    o.strKey = systemKeyMapInv[sysKeyCode] or 0
+    o.nCode = nCodeKeyMapInv[o.strKey] or 0
+    
+    return o
+end
+
+function InputKey:GetInputKeyName()
+	assert(self.eDevice, "Binding eDevice not provided.")
+    assert(self.eModifier, "Binding eModifier not provided.")
+	assert(self.nCode, "Binding nCode not provided.")
+    
+	if self.eDevice == 2 then
+		return "Mouse button " .. tostring(self.nCode + 1)
+	elseif self.eDevice == 1 then
+		if self.strKey ~= nil then
+			if self.eModifier == 0 then
+				return nCodeKeyMap[self.nCode]
+			else
+				local modifier
+				if self.eModifier == 1 then
+					modifier = "Shift"
+				elseif self.eModifier == 2 then
+					modifier = "Ctrl"
+				elseif self.eModifier == 4 then
+					modifier = "Alt"
+				else
+					modifier = "Unknown"
+				end
+				return string.format("%s-%s", modifier, self.strKey)
+			end
+		else
+			return "Unknown key"
+		end
+    elseif inputKey.eDevice == 0 then
+        return "Key not bound"
+	else
+		return "Unknown device/key"
+	end
+end
+
+-- Register Library
+Apollo.RegisterPackage(InputKey, "Blaz:Lib:InputKey-0.1", 1, {})
+
+-------------------------------------------------------------------------------
+-- KeyUtils
+-------------------------------------------------------------------------------
 local KeyUtils = {}
 
 function KeyUtils:new(logInst)
@@ -94,9 +189,10 @@ function KeyUtils:new(logInst)
 end
 
 function KeyUtils:GetInputKeyName(inputKey)
-	assert(inputKey.eDevice, "Binding eDevice not provided.")
-    assert(inputKey.eModifier, "Binding eModifier not provided.")
-	assert(inputKey.nCode, "Binding nCode not provided.")
+    assert(inputKey, "inputKey not provided.")
+	assert(inputKey.eDevice, "eDevice not provided.")
+    assert(inputKey.eModifier, "eModifier not provided.")
+	assert(inputKey.nCode, "nCode not provided.")
     
 	if inputKey.eDevice == 2 then
 		return "Mouse button " .. tostring(inputKey.nCode + 1)
@@ -156,7 +252,7 @@ function KeyUtils:Bind(bindings, actionName, index, inputKey, unbindConflictingB
 	local inputKeyName = self:GetInputKeyName(inputKey)
 		
 	if unbindConflictingBindings then
-		self:UnbindByInput(bindings, inputKey.eDevice, inputKey.eModifier, inputKey.nCode)
+		self:UnbindByInput(bindings, inputKey)
 	else
 		assert(not self:IsBound(bindings), 
 			self.log:Warn(inputKeyName .. " is already bound, please manually unbind it from the game's Keybind window."))
@@ -197,9 +293,10 @@ end
 
 function KeyUtils:UnbindByInput(bindings, inputKey)
 	assert(bindings, "Bindings not provided.")
-	assert(inputKey.eDevice, "Binding eDevice not provided.")
-    assert(inputKey.eModifier, "Binding eModifier not provided.")
-	assert(inputKey.nCode, "Binding nCode not provided.")
+    assert(inputKey, "inputKey not provided.")
+	assert(inputKey.eDevice, "eDevice not provided.")
+    assert(inputKey.eModifier, "eModifier not provided.")
+	assert(inputKey.nCode, "nCode not provided.")
     
 	for _, binding in ipairs(bindings) do
 		for _, arInput in ipairs(binding.arInputs) do
@@ -210,7 +307,7 @@ function KeyUtils:UnbindByInput(bindings, inputKey)
 				arInput.eDevice = 0
                 arInput.eModifier = 0
 				arInput.nCode = 0
-				self.log:Debug("Unbound '%s' from '%s'.", self:GetInputKeyName(eDevice, nCode), binding.strAction)
+				self.log:Debug("Unbound '%s' from '%s'.", self:GetInputKeyName(inputKey), binding.strAction)
 			end
 		end
 	end
@@ -249,14 +346,21 @@ function KeyUtils:GetBinding(bindings, inputKey)
     return nil
 end
 
-function KeyUtils:GetBindingByActionName(bindings, ...)
+function KeyUtils:GetBindingByActionName(bindings, actionName)
+	assert(bindings, "Bindings not provided.")
+	assert(actionName, "Action names list not provided.")
+
+	return self:GetBindingListByActionNames(bindings, actionName)[1]
+end
+
+function KeyUtils:GetBindingListByActionNames(bindings, ...)
 	assert(bindings, "Bindings not provided.")
 	assert(arg, "Action names list not provided.")
 
 	local foundBindings = {}
 	for _, binding in ipairs(bindings) do
 		for _, actionName in ipairs(arg) do
-			if a.strAction == actionName then
+			if binding.strAction == actionName then
 				table.insert(foundBindings, binding)
 			end
 		end
