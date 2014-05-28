@@ -381,6 +381,13 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
         return
     end
 
+	-- Esc key cleanups
+	if strKey == "Esc" then
+		if self.settings.automaticMouseBinding then
+			self:AutoBinding(false)
+		end
+	end
+
     -- target locking
 	if strKey == self.settings.mouseOverTargetLockKey then
         if GameLib.GetTargetUnit() ~= nil then
@@ -401,7 +408,8 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
     end
     
     -- automatic camera locking
-    if self.settings.mouseLockingType == EnumMouseLockingType.MovementKeys 
+    if not GameLib.IsMouseLockOn()
+		and self.settings.mouseLockingType == EnumMouseLockingType.MovementKeys 
         and not self.isAutomaticMouseLockDelayed
     then
         for _,key in ipairs(self.boundKeys.mouseLockTriggerKeys) do
@@ -435,26 +443,32 @@ function ActionControls:SetMouseLock(lockState)
         -- EXPERIMENTAL --
         -- Automatic remapping of LMB/RMB to action 1/2 on camera lock - Does not work in combat :(
         if self.settings.automaticMouseBinding then
-            local bindings = GameLib.GetKeyBindings()
+            
             try(function()
-                    if lockState then
-                        self:BindLmbMouseButton(bindings)
-                        self:BindRmbMouseButton(bindings, "DirectionalDash")
-                        self.isMouseLmbBound = true
-                        self.isMouseRmbBound = true
-                    else
-                        self:UnbindMouseButtons(bindings)
-                        self.isMouseLmbBound = false
-                        self.isMouseRmbBound = false
-                    end
-                    
-                    self.keyUtils:CommitBindings(bindings)
+                    self:AutoBinding(lockState)
                 end,
                 function(e)
                     self.log:Error(e)
                 end)
         end
     end
+end
+
+function ActionControls:AutoBinding(bindState)
+	local bindings = GameLib.GetKeyBindings()
+	
+	if bindState then
+		self:BindLmbMouseButton(bindings)
+	    self:BindRmbMouseButton(bindings, "DirectionalDash")
+	    self.isMouseLmbBound = true
+	    self.isMouseRmbBound = true
+	else
+		self:UnbindMouseButtons(bindings)
+	    self.isMouseLmbBound = false
+	    self.isMouseRmbBound = false
+	end
+	
+	self.keyUtils:CommitBindings(bindings)
 end
 
 -----------------------------------------------------------------------------------------------
@@ -618,6 +632,9 @@ function ActionControls:GenerateModel()
     self.model.bindingExplicitMouseLook = self.keyUtils:GetBindingByActionName(bindings, "ExplicitMouseLook")
     self.model.explicitMouseLook.nCode = self.model.bindingExplicitMouseLook.arInputs[1].nCode
     
+
+	self.model.isMouseBound = self.isMouseLmbBound or self.model.settings.automaticMouseBinding
+
     self.model.isMouseLmbBound = self.isMouseLmbBound
     if self.isMouseLmbBound then
         self.model.bindingLmb = self.keyUtils:GetBinding(bindings, EnumInputKeys.LMB)
@@ -643,9 +660,9 @@ function ActionControls:GenerateView()
 
     self.wndMain:FindChild("BtnTargetLockKey"):SetText(tostring(self.model.settings.mouseOverTargetLockKey or ""))
     
-    self.wndMain:FindChild("BtnBindMouseButtons"):SetCheck(self.model.isMouseLmbBound)
+    self.wndMain:FindChild("BtnBindMouseButtons"):SetCheck(self.model.isMouseBound)
     
-    self.wndMain:FindChild("BtnAutoBindMouseButtons"):Enable(self.model.isMouseLmbBound)
+    self.wndMain:FindChild("BtnAutoBindMouseButtons"):Enable(self.model.isMouseBound)
     self.wndMain:FindChild("BtnAutoBindMouseButtons"):SetCheck(self.model.settings.automaticMouseBinding)
 end
 
@@ -664,6 +681,8 @@ function ActionControls:OnRbKeyLockingUncheck( wndHandler, wndControl, eMouseBut
 end
 
 function ActionControls:OnBtnBindMouseButtons_ButtonCheck( wndHandler, wndControl, eMouseButton )
+	self.model.isMouseBound = true
+
 	self.model.isMouseLmbBound = true
     
     -- TODO: split to other button
@@ -677,6 +696,8 @@ function ActionControls:OnBtnBindMouseButtons_ButtonCheck( wndHandler, wndContro
 end
 
 function ActionControls:OnBtnBindMouseButtons_ButtonUncheck( wndHandler, wndControl, eMouseButton )
+	self.model.isMouseBound = false
+
 	self.model.isMouseLmbBound = false
     self.model.isMouseRmbBound = false
     self.model.rmbActionName = ""
@@ -782,7 +803,7 @@ function ActionControls:OnOK()
                     self:BindRmbMouseButton(bindings, self.model.rmbActionName)
                 end
                 
-                if not self.model.isMouseLmbBound and not self.model.isMouseRmbBound then
+                if not self.model.isMouseBound then
                     self:UnbindMouseButtons(bindings)
                 end
             end
