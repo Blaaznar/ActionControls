@@ -215,7 +215,7 @@ function ActionControls:OnDocLoaded()
         self:ReadKeyBindings()
 
         self:SetTargetLock(false)        
-        self:SetLock(false)
+        self:SetMouseLock(false)
     end
 end
 
@@ -630,7 +630,7 @@ function ActionControls:GenerateModel()
     self.model.explicitMouseLook.nCode = self.model.bindingExplicitMouseLook.arInputs[1].nCode
     
 
-	self.model.isMouseBound = self.isMouseLmbBound or self.isMouseRmbBound or self.model.settings.automaticMouseBinding
+	self.model.isMouseBound = self.isMouseLmbBound or self.isMouseRmbBound or self.settings.automaticMouseBinding
 
     if self.isMouseBound then
         self.model.rmbActionName = "DirectionalDash"
