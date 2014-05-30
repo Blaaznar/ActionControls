@@ -45,6 +45,18 @@ function try(tryFunction, catchFunction)
     end
 end
 
+function MeasureExecutionTime(testFunction, iterations)
+    iterations = iterations or 1
+    
+    local x = os.clock()
+    
+    for i=1, iterations do
+        testFunction()
+    end
+
+    return os.clock() - x
+end
+
 -------------------------------------------------------------------------------
 -- Other 3rd party utils
 -------------------------------------------------------------------------------
