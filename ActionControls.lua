@@ -47,8 +47,6 @@ function ActionControls:new(logInst, keyUtilsInst)
     o.log = logInst
     o.keyUtils = keyUtilsInst
     
-    
-    o.isAutomaticMouseLockDelayed = false
     o.immediateMouseOverUnit = nil
     o.lastTargetUnit = nil
     o.isTargetLocked = false
@@ -57,6 +55,7 @@ function ActionControls:new(logInst, keyUtilsInst)
     o.boundKeys = {}
     o.boundKeys.mouseLockToggleKeys = {}
     o.boundKeys.mouseLockTriggerKeys = {}
+    o.boundKeys.sprintingModifier = {}
 
     o.settings = {
         mouseLockingType = EnumMouseLockingType.MovementKeys,
@@ -99,6 +98,15 @@ end
 function ActionControls:GetAsyncLoadStatus()
     return Apollo.AddonLoadStatus.Loaded
 end
+
+function ActionControls:IsBlockingWindowOpen()
+    if CSIsLib.IsCSIRunning() then
+        return true
+    end
+    
+    return false
+end
+
 
 -----------------------------------------------------------------------------------------------
 -- ActionControls OnDocLoaded
@@ -188,10 +196,6 @@ function ActionControls:OnDocLoaded()
             "PVPMatchFinished",
             "P2PTradeInvite",
             "ProgressClickWindowDisplay")
-        
-        Apollo.RegisterTimerHandler("GameDialogTimer", "OnGameDialogTimer", self)
-        Apollo.CreateTimer("GameDialogTimer", 0.3, false)
-        Apollo.StopTimer("GameDialogTimer")
         
         -- Lock triggers
         Apollo.RegisterEventHandler("SystemKeyDown", "OnSystemKeyDown", self) 
@@ -402,9 +406,9 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
     end
     
     -- automatic camera locking
-    if not GameLib.IsMouseLockOn()
-		and self.settings.mouseLockingType == EnumMouseLockingType.MovementKeys 
-        and not self.isAutomaticMouseLockDelayed
+    if self.settings.mouseLockingType == EnumMouseLockingType.MovementKeys 
+		and not GameLib.IsMouseLockOn()
+        and not self:IsBlockingWindowOpen()
     then
         for _,key in ipairs(self.boundKeys.mouseLockTriggerKeys) do
             if strKey == key.strKey then
@@ -502,21 +506,19 @@ end
 -----------------------------------------------------------------------------------------------
 
 function ActionControls:OnGameDialogInteraction()
-    -- TODO: Trigger only on window shown, not off
     self.log:Debug("OnGameDialogInteraction()")
-    self:SetMouseLock(false)
+    
+    --if self:IsBlockingWindowOpen() then
+        self:SetMouseLock(false)
+    --end
 end
 
 function ActionControls:OnGameDialog()
-    -- TODO: Trigger only on window shown, not off
-    self:SetMouseLock(false)
-    self.isAutomaticMouseLockDelayed = true
-    Apollo.StartTimer("GameDialogTimer")
-end
-
-function ActionControls:OnGameDialogTimer()
-    self.log:Debug("OnGameDialogTimer()")
-    self.isAutomaticMouseLockDelayed = false
+    self.log:Debug("OnGameDialog()")
+    
+    --if self:IsBlockingWindowOpen() then
+        self:SetMouseLock(false)
+    --end
 end
 
 --------------------------------------------------------------------------
