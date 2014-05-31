@@ -325,6 +325,8 @@ function KeyUtils:IsBound(bindings, inputKey)
 	return self:GetBinding(bindings, inputKey) ~= nil
 end
 
+-- TODO: use GameLib.GetCharInputKeySet!!!!!!!!!!!!!!!!!!!!!!!!
+
 function KeyUtils:GetBinding(bindings, inputKey)
 	assert(inputKey.eDevice, "Binding eDevice not provided.")
     assert(inputKey.eModifier, "Binding eModifier not provided.")

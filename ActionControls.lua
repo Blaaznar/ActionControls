@@ -60,6 +60,9 @@ function ActionControls:new(logInst, keyUtilsInst)
     o.settings = {
         mouseLockingType = EnumMouseLockingType.MovementKeys,
         mouseOverTargetLockKey = nil,
+        
+        mouseLmbActionName = "LimitedActionSet1",
+        mouseRmbActionName = "DirectionalDash",
 
 		-- experimental
 		automaticMouseBinding = false
@@ -97,27 +100,6 @@ end
 
 function ActionControls:GetAsyncLoadStatus()
     return Apollo.AddonLoadStatus.Loaded
-end
-
-function ActionControls:IsBlockingWindowOpen()
-    if CSIsLib.IsCSIRunning() then
-        return true
-    end
-
-	for _,strata in ipairs(Apollo.GetStrata()) do -- thanks to Xeurian for finding this function!
-		for _,window in ipairs(Apollo.GetWindowsInStratum(strata)) do
-			if window:IsStyleOn("Escapable") 
-            and not window:IsStyleOn("CloseOnExternalClick") 
-            then
-				if window:IsShown() or window:IsVisible() then
-		            self.log:Debug("Automatic mouse look blocked by '%s': ", window:GetName())
-		            return true
-		        end
-			end
-		end
-	end
-    
-    return false
 end
 
 -----------------------------------------------------------------------------------------------
@@ -464,6 +446,27 @@ function ActionControls:SetMouseLock(lockState)
     end
 end
 
+function ActionControls:IsBlockingWindowOpen()
+    if CSIsLib.IsCSIRunning() then
+        return true
+    end
+
+	for _,strata in ipairs(Apollo.GetStrata()) do -- thanks to Xeurian for finding this function!
+		for _,window in ipairs(Apollo.GetWindowsInStratum(strata)) do
+			if window:IsStyleOn("Escapable") 
+            and not window:IsStyleOn("CloseOnExternalClick") 
+            then
+				if window:IsShown() or window:IsVisible() then
+		            self.log:Debug("Automatic mouse look blocked by '%s': ", window:GetName())
+		            return true
+		        end
+			end
+		end
+	end
+    
+    return false
+end
+
 -------------------------------------------------------------------------------
 -- EXPERIMENTAL - AutoBinding
 -------------------------------------------------------------------------------
@@ -473,8 +476,8 @@ function ActionControls:AutoBinding(bindState)
 	end
     
 	if bindState then
-		self:BindLmbMouseButton(self.bindings)
-	    self:BindRmbMouseButton(self.bindings, "DirectionalDash")
+		self:BindLmbMouseButton(self.bindings, self.settings.mouseLmbActionName)
+	    self:BindRmbMouseButton(self.bindings, self.settings.mouseRmbActionName)
 	    self.isMouseLmbBound = true
 	    self.isMouseRmbBound = true
 	else
@@ -792,8 +795,8 @@ function ActionControls:OnOK()
                 or self.model.settings.automaticMouseBinding ~= self.settings.automaticMouseBinding
             then
                 if self.model.isMouseBound then
-                    self:BindLmbMouseButton(bindings)
-                    self:BindRmbMouseButton(bindings, self.model.rmbActionName)
+                    self:BindLmbMouseButton(bindings, self.model.settings.mouseLmbActionName)
+                    self:BindRmbMouseButton(bindings, self.model.settings.mouseRmbActionName)
                 end
                 
                 if not self.model.isMouseBound then
@@ -821,18 +824,18 @@ function ActionControls:OnOK()
 end
 
 -- Binding
-function ActionControls:BindLmbMouseButton(bindings)
-    self.keyUtils:Bind(bindings, "LimitedActionSet1", 2, EnumInputKeys.LMB, true)
+function ActionControls:BindLmbMouseButton(bindings, mouseLmbActionName)
+    self.keyUtils:Bind(bindings, mouseLmbActionName, 2, EnumInputKeys.LMB, true)
     self.isMouseLmbBound = true
     
-    self.log:Debug("Left mouse button bound to 'Action 1'.")
+    self.log:Debug("Right mouse button bound to '%s'.", mouseLmbActionName)
 end
 
-function ActionControls:BindRmbMouseButton(bindings, actionName)
-    self.keyUtils:Bind(bindings, actionName, 2, EnumInputKeys.RMB, true)
+function ActionControls:BindRmbMouseButton(bindings, mouseRmbActionName)
+    self.keyUtils:Bind(bindings, mouseRmbActionName, 2, EnumInputKeys.RMB, true)
     self.isMouseRmbBound = true
     
-    self.log:Debug("Right mouse button bound to '%s'.", actionName)
+    self.log:Debug("Right mouse button bound to '%s'.", mouseRmbActionName)
 end
 
 function ActionControls:UnbindMouseButtons(bindings)
