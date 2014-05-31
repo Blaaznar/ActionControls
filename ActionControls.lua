@@ -24,10 +24,10 @@ local EnumMouseLockingType =
 
 local EnumInputKeys =
 {
-    None = {eDevice = 0, eModifier = 0, nCode = 0},
-    Esc = {eDevice = 1, eModifier = 0, nCode = 1},
-    LMB = {eDevice = 2, eModifier = 0, nCode = 0},
-    RMB = {eDevice = 2, eModifier = 0, nCode = 1}
+    None = {eDevice = 0, eModifier = 0, nCode = 0, strKey = ""},
+    Esc = {eDevice = 1, eModifier = 0, nCode = 1, strKey = "Esc"},
+    LMB = {eDevice = 2, eModifier = 0, nCode = 0, strKey = "Mouse-Left"},
+    RMB = {eDevice = 2, eModifier = 0, nCode = 1, strKey = "Mouse-Right"}
 }
  
 -----------------------------------------------------------------------------------------------
@@ -38,8 +38,8 @@ local ActionControls = {}
 -----------------------------------------------------------------------------------------------
 -- Initialization
 -----------------------------------------------------------------------------------------------
-function ActionControls:new(logInst, keyUtilsInst)
-    o = {}
+function ActionControls:new(o, logInst, keyUtilsInst)
+    o = o or {}
     setmetatable(o, self)
     self.__index = self 
 
@@ -187,6 +187,10 @@ function ActionControls:OnDocLoaded()
             "PVPMatchFinished",
             "P2PTradeInvite",
             "ProgressClickWindowDisplay")
+
+		Apollo.RegisterTimerHandler("DelayedMouseUnlockTimer", "OnDelayedMouseUnlockTimer", self)
+        Apollo.CreateTimer("DelayedMouseUnlockTimer", 0.3, false)
+        Apollo.StopTimer("DelayedMouseUnlockTimer")
         
         -- Lock triggers
         Apollo.RegisterEventHandler("SystemKeyDown", "OnSystemKeyDown", self) 
@@ -241,11 +245,16 @@ function ActionControls:RestoreUserSettings(t)
     try(function ()
             local settings = table.ShallowCopy(self.settings)
             table.ShallowMerge(t, settings)
-            -- TODO: validate settings
+            
+			-- validation
+            assert(GameLib.GetKeyBinding(self.settings.mouseLmbActionName))
+			assert(GameLib.GetKeyBinding(self.settings.mouseRmbActionName))
+            
             self.settings = settings
         end,
         function (e)
             self.log:Error("Error while loading user settings. Default values will be used.")
+			Apollo.AddAddonErrorText(self, tostring(e))
         end)
 end
 
@@ -310,8 +319,9 @@ function ActionControls:ReadKeyBindings()
 			"StrafeRight", 
 			"TurnRight", 
 			"Jump", 
-			"ToggleAutoRun")
-    
+			"ToggleAutoRun",
+			"SprintModifier")
+   
     return bindings
 end
 
@@ -331,12 +341,12 @@ function ActionControls:GetBoundKeysForAction(bindings, ...)
 			
 			-- can support only keyboard for now
 			if arInput.eDevice == 1 then
-                local retVal = {}
-                
-                retVal.eDevice = arInput.eDevice
-                retVal.eModifier = arInput.eModifier
-                retVal.nCode = arInput.nCode
-                retVal.strKey = self.keyUtils:KeybindNCodeToChar(arInput.nCode)
+                local retVal = {
+                	eDevice = arInput.eDevice,
+                	eModifier = arInput.eModifier,
+                	nCode = arInput.nCode,
+                	strKey = self.keyUtils:KeybindNCodeToChar(arInput.nCode)
+				}
                 
 				table.insert(boundKeys, retVal)
 			end
@@ -368,7 +378,7 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
     --local inputKey = InputKey:newFromSysKeyCode(sysKeyCode)
 
     local strKey = self.keyUtils:SysKeyCodeToChar(sysKeyCode)
-    --self.log:Debug("OnSystemKeyDown(%s): %s", sysKeyCode, tostring(strKey))
+    --self.log:Info("OnSystemKeyDown(%s): %s", sysKeyCode, tostring(strKey))
     
     if strKey == nil then
         self.log:Debug("Unknown key code (%s), please report it to addon author.", sysKeyCode)
@@ -530,6 +540,17 @@ function ActionControls:OnGameDialogInteraction()
     self.log:Debug("OnGameDialogInteraction()")
     
     self:SetMouseLock(false)
+    --Apollo.StartTimer("DelayedMouseUnlockTimer")
+end
+
+function OnDelayedMouseUnlockTimer()
+	self.log:Debug("OnDelayedMouseUnlockTimer()")
+	
+	if self:IsBlockingWindowOpen() then
+		self:SetMouseLock(false)
+	else
+		self:SetMouseLock(true)
+	end
 end
 
 --------------------------------------------------------------------------
@@ -601,13 +622,13 @@ end
 
 function ActionControls:DisplayLockState(lockState)
     if lockState then
-        local targetForm = Apollo.FindWindowByName("ClusterTargetFlipped")
-        if targetForm == nil then
+        self.wndTargetForm = self.wndTargetForm or Apollo.FindWindowByName("ClusterTargetFlipped")
+        if self.wndTargetForm == nil then
             return
         end
         
-		self.wndTargetLock:SetAnchorPoints(targetForm:GetAnchorPoints())
-		self.wndTargetLock:SetAnchorOffsets(targetForm:GetAnchorOffsets())
+		self.wndTargetLock:SetAnchorPoints(self.wndTargetForm:GetAnchorPoints())
+		self.wndTargetLock:SetAnchorOffsets(self.wndTargetForm:GetAnchorOffsets())
     
 		self.wndTargetLock:Show(true, true)
         --self.log:Info("MouseOver target lock set on <%s>", tostring(GameLib.GetTargetUnit():GetName()))
@@ -876,7 +897,7 @@ end
 local logInst = SimpleLog:new()
 local keyUtilsInst = KeyUtils:new(logInst)
 
-local actionControlsInst = ActionControls:new(logInst, keyUtilsInst)
+local actionControlsInst = ActionControls:new(nil, logInst, keyUtilsInst)
 
 actionControlsInst:Init()
 

@@ -11,7 +11,7 @@
 
 -- Character map for keyPress codes reported by SystemKeyDown event
 local systemKeyMap = { 
-	["Backspace"] = 8, ["Tab"] = 9, ["Shift"] = 16, ["Ctrl"] = 17, 
+	["Backspace"] = 8, ["Tab"] = 9, ["LShift"] = 16, ["Ctrl"] = 17, 
 	["Caps Lock"] = 20, ["Esc"] = 27, ["Space"] = 32, ["Left"] = 37,
 	["Up"] = 38, ["Right"] = 39, ["Down"] = 40,
 
@@ -53,9 +53,10 @@ local nCodeKeyMap = {
 
 	[30] = "A", [31] = "S", [32] = "D", [33] = "F", [34] = "G", [35] = "H",
 	[36] = "J", [37] = "K", [38] = "L", [39] = ";", [40] = "'", [41] = "`",
-	
+	[42] = "LShift",
 	[43] = "\\", [44] = "Z", [45] = "X", [46] = "C", [47] = "V", [48] = "B",
 	[49] = "N", [50] = "M", [51] = ",", [52] = ".",
+	[54] = "RShift",
 	
 	[57] = "Space", [58] = "Caps Lock", [59] = "F1", [60] = "F2", [61] = "F3", 
 	[62] = "F4", [63] = "F5", [64] = "F6", [65] = "F7", [66] = "F8", 
