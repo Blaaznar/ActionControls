@@ -103,10 +103,22 @@ function ActionControls:IsBlockingWindowOpen()
     if CSIsLib.IsCSIRunning() then
         return true
     end
+
+	for _,strata in ipairs(Apollo.GetStrata()) do -- thanks to Xeurian for finding this function!
+		for _,window in ipairs(Apollo.GetWindowsInStratum(strata)) do
+			if window:IsStyleOn("Escapable") 
+            and not window:IsStyleOn("CloseOnExternalClick") 
+            then
+				if window:IsShown() or window:IsVisible() then
+		            self.log:Debug("Automatic mouse look blocked by '%s': ", window:GetName())
+		            return true
+		        end
+			end
+		end
+	end
     
     return false
 end
-
 
 -----------------------------------------------------------------------------------------------
 -- ActionControls OnDocLoaded
@@ -186,11 +198,8 @@ function ActionControls:OnDocLoaded()
             "ToggleQuestLog",
             "ToggleTradeskills",
             "ToggleZoneMap",
-            "TradeskillEngravingStationOpen")
+            "TradeskillEngravingStationOpen",
 
-        -- Unlock triggers - auto-popup windows 
-        -- TODO: Monitor Shown state
-        self:RegisterEvents("OnGameDialog", 
             "DuelStateChanged",
             "MatchingGameReady",
             "PVPMatchFinished",
@@ -340,8 +349,14 @@ function ActionControls:GetBoundKeysForAction(bindings, ...)
 			
 			-- can support only keyboard for now
 			if arInput.eDevice == 1 then
-				arInput.strKey = self.keyUtils:KeybindNCodeToChar(arInput.nCode)
-				table.insert(boundKeys, arInput)
+                local retVal = {}
+                
+                retVal.eDevice = arInput.eDevice
+                retVal.eModifier = arInput.eModifier
+                retVal.nCode = arInput.nCode
+                retVal.strKey = self.keyUtils:KeybindNCodeToChar(arInput.nCode)
+                
+				table.insert(boundKeys, retVal)
 			end
 		end
 	end
@@ -408,10 +423,13 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
     -- automatic camera locking
     if self.settings.mouseLockingType == EnumMouseLockingType.MovementKeys 
 		and not GameLib.IsMouseLockOn()
-        and not self:IsBlockingWindowOpen()
     then
         for _,key in ipairs(self.boundKeys.mouseLockTriggerKeys) do
             if strKey == key.strKey then
+				if self:IsBlockingWindowOpen() then
+					return
+				end
+				
                 self.log:Debug("OnSystemKeyDown(%s:'%s') - Manual movement lock", sysKeyCode, key.strKey)
                 self:SetMouseLock(true)
                 return
@@ -508,17 +526,7 @@ end
 function ActionControls:OnGameDialogInteraction()
     self.log:Debug("OnGameDialogInteraction()")
     
-    --if self:IsBlockingWindowOpen() then
-        self:SetMouseLock(false)
-    --end
-end
-
-function ActionControls:OnGameDialog()
-    self.log:Debug("OnGameDialog()")
-    
-    --if self:IsBlockingWindowOpen() then
-        self:SetMouseLock(false)
-    --end
+    self:SetMouseLock(false)
 end
 
 --------------------------------------------------------------------------
