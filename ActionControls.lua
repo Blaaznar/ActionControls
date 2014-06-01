@@ -24,10 +24,10 @@ local EnumMouseLockingType =
 
 local EnumInputKeys =
 {
-    None = {eDevice = 0, eModifier = 0, nCode = 0, strKey = ""},
-    Esc = {eDevice = 1, eModifier = 0, nCode = 1, strKey = "Esc"},
-    LMB = {eDevice = 2, eModifier = 0, nCode = 0, strKey = "Mouse-Left"},
-    RMB = {eDevice = 2, eModifier = 0, nCode = 1, strKey = "Mouse-Right"}
+    None = InputKey:newFromKeyParams(0, 0, 0),
+    Esc = InputKey:newFromKeyParams(1, 0, 1),
+    LMB = InputKey:newFromKeyParams(2, 0, 0),
+    RMB = InputKey:newFromKeyParams(2, 0, 1)
 }
  
 -----------------------------------------------------------------------------------------------
@@ -341,12 +341,7 @@ function ActionControls:GetBoundKeysForAction(bindings, ...)
 			
 			-- can support only keyboard for now
 			if arInput.eDevice == 1 then
-                local retVal = {
-                	eDevice = arInput.eDevice,
-                	eModifier = arInput.eModifier,
-                	nCode = arInput.nCode,
-                	strKey = self.keyUtils:KeybindNCodeToChar(arInput.nCode)
-				}
+                local retVal = InputKey:newFromArInput(arInput)
                 
 				table.insert(boundKeys, retVal)
 			end
@@ -360,14 +355,6 @@ end
 -- Key press processing
 -------------------------------------------------------------------------------
 function ActionControls:OnSystemKeyDown(sysKeyCode)
-    -- modifiers not properly supported yet
-    if Apollo.IsAltKeyDown() 
-    or Apollo.IsControlKeyDown() 
-    --or Apollo.IsShiftKeyDown() -- TODO: properly read which modifier is the sprint modifier
-    then
-        return
-    end
-
     -- stop processing keys if configuration window is open
     if (self.wndMain ~= nil and self.wndMain:IsVisible()) 
     then
@@ -375,18 +362,16 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
         return
     end
 
-    --local inputKey = InputKey:newFromSysKeyCode(sysKeyCode)
+    local inputKey = InputKey:newFromSysKeyCode(sysKeyCode)
 
-    local strKey = self.keyUtils:SysKeyCodeToChar(sysKeyCode)
-    self.log:Debug("OnSystemKeyDown(%s): %s", sysKeyCode, tostring(strKey))
-    
-    if strKey == nil then
+    if inputKey.strKey == "" or inputKey.nCode == 0 then
         self.log:Debug("Unknown key code (%s), please report it to addon author.", sysKeyCode)
         return
+    --else self.log:Debug("OnSystemKeyDown(%s): %s", sysKeyCode, tostring(inputKey))
     end
     
 	-- Esc key cleanups
-	if strKey == "Esc" then
+	if inputKey == EnumInputKeys.Esc then
 		if self.settings.automaticMouseBinding then
 			self:AutoBinding(false)
 		end
@@ -394,7 +379,12 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
 	end
 
     -- target locking
-	if strKey == self.settings.mouseOverTargetLockKey then
+	if not Apollo.IsAltKeyDown() -- TODO: Support for modifiers
+        and not Apollo.IsControlKeyDown() 
+        and not Apollo.IsShiftKeyDown()
+        and inputKey.strKey ~= nil
+        and inputKey.strKey == self.settings.mouseOverTargetLockKey 
+    then
         if GameLib.GetTargetUnit() ~= nil then
             self:SetTargetLock(not self:GetTargetLock())
         else
@@ -405,7 +395,7 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
 
     -- mouse look toggle
     for _,key in ipairs(self.boundKeys.mouseLockToggleKeys) do
-        if strKey == key.strKey then
+        if inputKey == key then
             self.log:Debug("OnSystemKeyDown(%s) - Manual toggle", sysKeyCode)
             self:ToggleMouseLock()
             return
@@ -417,7 +407,7 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
 		and not GameLib.IsMouseLockOn()
     then
         for _,key in ipairs(self.boundKeys.mouseLockTriggerKeys) do
-            if strKey == key.strKey then
+            if inputKey == key then
 				if self:IsBlockingWindowOpen() then
 					return
 				end
@@ -481,9 +471,10 @@ end
 -- EXPERIMENTAL - AutoBinding
 -------------------------------------------------------------------------------
 function ActionControls:AutoBinding(bindState)
-    if self.bindings == nil then
+    --if self.bindings == nil then 
+    -- APOLLO_BUG: Game doesn't correctly notify of bindings changing when only secondary bindings have been changed, so if I cache the bindings I'll end up overwriting changes made to game's keybindings.
         self.bindings = GameLib.GetKeyBindings()
-	end
+	--end
     
 	if bindState then
 		self:BindLmbMouseButton(self.bindings, self.settings.mouseLmbActionName)
@@ -894,7 +885,7 @@ end
 -- ActionControls Instance
 -----------------------------------------------------------------------------------------------
 local logInst = SimpleLog:new()
-local keyUtilsInst = KeyUtils:new(logInst)
+local keyUtilsInst = KeyUtils:new(nil, logInst)
 
 local actionControlsInst = ActionControls:new(nil, logInst, keyUtilsInst)
 

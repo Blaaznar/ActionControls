@@ -88,10 +88,18 @@ function InputKey:new(o)
     setmetatable(o, self)
     self.__index = self 
     self.__eq = function (a,b) return a.eDevice == b.eDevice and a.eModifier == b.eModifier and a.nCode == b.nCode end
+    self.__tostring = function (a) return a:GetInputKeyName() end
+        
+    o.eDevice = 0
+    o.eModifier = 0
+    o.nCode = 0
+    o.strKey = ""
+    
+    return o
 end
 
 function InputKey:newFromArInput(arInput)
-    o = InputKey:new()
+    local o = self:new()
 
     -- initialize variables here
     o.eDevice = arInput.eDevice
@@ -103,7 +111,7 @@ function InputKey:newFromArInput(arInput)
 end
 
 function InputKey:newFromKeyParams(eDevice, eModifier, nCode)
-    o = InputKey:new()
+    local o = self:new()
 
     -- initialize variables here
     o.eDevice = eDevice
@@ -115,11 +123,10 @@ function InputKey:newFromKeyParams(eDevice, eModifier, nCode)
 end
 
 function InputKey:newFromSysKeyCode(sysKeyCode) -- TODO: how to chain constructors?
-    o = InputKey:new()
+    local o = self:new()
 
     -- initialize variables here
-    o.eDevice = eDevice
-    o.eModifier = eModifier
+    o.eDevice = 1
     if Apollo.IsAltKeyDown() then
         o.eModifier = 1
     elseif Apollo.IsControlKeyDown() then
@@ -130,7 +137,7 @@ function InputKey:newFromSysKeyCode(sysKeyCode) -- TODO: how to chain constructo
         o.eModifier = 0
     end
     
-    o.strKey = systemKeyMapInv[sysKeyCode] or 0
+    o.strKey = systemKeyMapInv[sysKeyCode] or ""
     o.nCode = nCodeKeyMapInv[o.strKey] or 0
     
     return o
@@ -140,11 +147,11 @@ function InputKey:GetInputKeyName()
 	assert(self.eDevice, "Binding eDevice not provided.")
     assert(self.eModifier, "Binding eModifier not provided.")
 	assert(self.nCode, "Binding nCode not provided.")
-    
+        
 	if self.eDevice == 2 then
 		return "Mouse button " .. tostring(self.nCode + 1)
 	elseif self.eDevice == 1 then
-		if self.strKey ~= nil then
+		if self.strKey ~= "" then
 			if self.eModifier == 0 then
 				return nCodeKeyMap[self.nCode]
 			else
@@ -158,7 +165,11 @@ function InputKey:GetInputKeyName()
 				else
 					modifier = "Unknown"
 				end
-				return string.format("%s-%s", modifier, self.strKey)
+                if self.nCode == 0 then
+                    return string.format("%s", modifier)
+                else
+                    return string.format("%s-%s", modifier, self.strKey)
+                end
 			end
 		else
 			return "Unknown key"
@@ -178,8 +189,8 @@ Apollo.RegisterPackage(InputKey, "Blaz:Lib:InputKey-0.1", 1, {})
 -------------------------------------------------------------------------------
 local KeyUtils = {}
 
-function KeyUtils:new(logInst)
-    o = {}
+function KeyUtils:new(o, logInst)
+    o = o or {}
     setmetatable(o, self)
     self.__index = self 
 
