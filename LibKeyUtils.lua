@@ -275,17 +275,13 @@ function KeyUtils:Bind(bindings, actionName, index, inputKey, unbindConflictingB
 	assert(not GameLib.GetPlayerUnit():IsInCombat(), "In combat, changing bindings is not possible at this moment.")
 	assert(bindings, "Bindings not provided.")
 	assert(index, "Binding index not provided.")
-	assert(inputKey.eDevice, "Binding eDevice not provided.")
-    assert(inputKey.eModifier, "Binding eModifier not provided.")
-	assert(inputKey.nCode, "Binding nCode not provided.")
+	assert(inputKey, "InputKey not provided.")
 	
-	local inputKeyName = self:GetInputKeyName(inputKey)
-		
 	if unbindConflictingBindings then
 		self:UnbindByInput(bindings, inputKey)
 	else
 		assert(not self:IsBound(bindings), 
-			self.log:Warn(inputKeyName .. " is already bound, please manually unbind it from the game's Keybind window."))
+			self.log:Warn("'%s' is already bound, please manually unbind it from the game's Keybind window.", tostring(inputKey)))
 	end
 	
 	local binding = self:GetBindingByActionName(bindings, actionName)
@@ -294,7 +290,7 @@ function KeyUtils:Bind(bindings, actionName, index, inputKey, unbindConflictingB
         binding.arInputs[index].eModifier = inputKey.eModifier
         binding.arInputs[index].nCode = inputKey.nCode
         
-        self.log:Debug("Bound binding for '%s' at index %s to: %s", actionName, tostring(index), inputKeyName)
+        self.log:Debug("Bound binding for '%s' at index %s to: %s", actionName, tostring(index), tostring(inputKey))
     else
         self.log:Debug("Binding '%s' not found.", actionName)
     end

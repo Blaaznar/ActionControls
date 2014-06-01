@@ -493,8 +493,8 @@ end
 -----------------------------------------------------------------------------------------------
 -- World Click functions
 -----------------------------------------------------------------------------------------------
-function ActionControls:OnGameClickWorld(tPos)
-    self.log:Debug("OnGameClickWorld(%s)", tostring(tPos))
+function ActionControls:OnGameClickWorld(param)
+    self.log:Debug("OnGameClickWorld/Unit(%s)", tostring(param))
     
     if GameLib.IsMouseLockOn() then
         -- reselect units targeted before the mouse click
