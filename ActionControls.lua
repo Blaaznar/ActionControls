@@ -188,9 +188,9 @@ function ActionControls:OnDocLoaded()
             "P2PTradeInvite",
             "ProgressClickWindowDisplay")
 
-		Apollo.RegisterTimerHandler("DelayedMouseUnlockTimer", "OnDelayedMouseUnlockTimer", self)
-        Apollo.CreateTimer("DelayedMouseUnlockTimer", 0.3, false)
-        Apollo.StopTimer("DelayedMouseUnlockTimer")
+		Apollo.RegisterTimerHandler("DelayedMouseLockToggleTimer", "OnDelayedMouseLockToggleTimer", self)
+        Apollo.CreateTimer("DelayedMouseLockToggleTimer", 0.1, false) -- Hack for getting the right window shown state
+        Apollo.StopTimer("DelayedMouseLockToggleTimer")
         
         -- Lock triggers
         Apollo.RegisterEventHandler("SystemKeyDown", "OnSystemKeyDown", self) 
@@ -378,7 +378,7 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
     --local inputKey = InputKey:newFromSysKeyCode(sysKeyCode)
 
     local strKey = self.keyUtils:SysKeyCodeToChar(sysKeyCode)
-    --self.log:Info("OnSystemKeyDown(%s): %s", sysKeyCode, tostring(strKey))
+    self.log:Debug("OnSystemKeyDown(%s): %s", sysKeyCode, tostring(strKey))
     
     if strKey == nil then
         self.log:Debug("Unknown key code (%s), please report it to addon author.", sysKeyCode)
@@ -538,17 +538,16 @@ end
 
 function ActionControls:OnGameDialogInteraction()
     self.log:Debug("OnGameDialogInteraction()")
-    
-    self:SetMouseLock(false)
-    --Apollo.StartTimer("DelayedMouseUnlockTimer")
+
+    Apollo.StartTimer("DelayedMouseLockToggleTimer")
 end
 
-function OnDelayedMouseUnlockTimer()
-	self.log:Debug("OnDelayedMouseUnlockTimer()")
+function ActionControls:OnDelayedMouseLockToggleTimer()
+	self.log:Debug("OnDelayedMouseLockToggleTimer()")
 	
 	if self:IsBlockingWindowOpen() then
 		self:SetMouseLock(false)
-	else
+	elseif self.settings.mouseLockingType ~= EnumMouseLockingType.None then
 		self:SetMouseLock(true)
 	end
 end
