@@ -139,30 +139,30 @@ function ActionControls:OnDocLoaded()
             "GenericEvent_ShowConfirmLeaveDisband",
             "GenericEvent_ToggleGroupBag",
             "Guild_WindowLoaded",
-            "GuildBankerOpen", 
-            "GuildRegistrarOpen",
-            "HousingBrokerOpen",
-            "HousingPanelControlOpen",
+            "GuildBankerOpen", "GuildBankerClose", 
+            "GuildRegistrarOpen", "GuildRegistrarClose",
+            "HousingBrokerOpen", "HousingBrokerClose",
+            "HousingPanelControlOpen", "HousingPanelControlClose",
             "InspectWindowHasBeenToggled",
-            "InvokeCraftingWindow",
+            "InvokeCraftingWindow", "CloseCraftingWindow",
             "InvokeFriendsList",
             "InvokeScientistExperimentation",
-            "InvokeSettlerBuild",
+            "InvokeSettlerBuild", "SettlerHubClose",
             "InvokeShuttlePrompt",
             "InvokeSoldierBuild",
-            "InvokeTaxiWindow",
-            "InvokeTradeskillTrainerWindow",
-            "InvokeVendorWindow",
-            "MailBoxActivate",
+            "InvokeTaxiWindow", "TaxiWindowClose",
+            "InvokeTradeskillTrainerWindow", "CloseTradeskillTrainerWindow",
+            "InvokeVendorWindow", "CloseVendorWindow",
+            "MailBoxActivate", "MailWindowHasBeenClosed",
             "MatchingGameReady",
             "PlayerPathShow",
             "PlayerPathShowWithData",
-            "ResourceConversionOpen",
-            "ShowBank",
-            "ShowDye",
+            "ResourceConversionOpen", "ResourceConversionClose",
+            "ShowBank", "HideBank",
+            "ShowDye", "HideDye",
             "ShowInstanceGameModeDialog",
             "ShowQuestLog",
-            "ShowResurrectDialog",
+            "ShowResurrectDialog", "CharacterCreated",
             "Test_MouseReturnSignal",
             "ToggleAbilitiesWindow",
             "ToggleAchievementsFromHUD",
@@ -180,7 +180,7 @@ function ActionControls:OnDocLoaded()
             "ToggleQuestLog",
             "ToggleTradeskills",
             "ToggleZoneMap",
-            "TradeskillEngravingStationOpen",
+            "TradeskillEngravingStationOpen", "TradeskillEngravingStationClose",
 
             "DuelStateChanged",
             "MatchingGameReady",
@@ -191,7 +191,7 @@ function ActionControls:OnDocLoaded()
 		Apollo.RegisterTimerHandler("DelayedMouseLockToggleTimer", "OnDelayedMouseLockToggleTimer", self)
         Apollo.CreateTimer("DelayedMouseLockToggleTimer", 0.1, false) -- Hack for getting the right window shown state
         Apollo.StopTimer("DelayedMouseLockToggleTimer")
-        
+
         -- Lock triggers
         Apollo.RegisterEventHandler("SystemKeyDown", "OnSystemKeyDown", self) 
         Apollo.RegisterEventHandler("GameClickWorld", "OnGameClickWorld", self)
