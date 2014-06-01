@@ -11,7 +11,7 @@
 
 -- Character map for keyPress codes reported by SystemKeyDown event
 local systemKeyMap = { 
-	["Backspace"] = 8, ["Tab"] = 9, ["LShift"] = 16, ["Ctrl"] = 17, 
+	["Backspace"] = 8, ["Tab"] = 9, ["Shift"] = 16, ["Ctrl"] = 17, 
 	["Caps Lock"] = 20, ["Esc"] = 27, ["Space"] = 32, ["Left"] = 37,
 	["Up"] = 38, ["Right"] = 39, ["Down"] = 40,
 
@@ -50,13 +50,15 @@ local nCodeKeyMap = {
 	[13] = "=", [14] = "Backspace", [15] = "Tab", [16] = "Q", [17] = "W",
 	[18] = "E", [19] = "R", [20] = "T", [21] = "Y", [22] = "U", [23] = "I",
 	[24] = "O", [25] = "P", [26] = "[", [27] = "]",
+    
+    [29] = "Ctrl",
 
 	[30] = "A", [31] = "S", [32] = "D", [33] = "F", [34] = "G", [35] = "H",
 	[36] = "J", [37] = "K", [38] = "L", [39] = ";", [40] = "'", [41] = "`",
-	[42] = "LShift",
+	[42] = "Shift",
 	[43] = "\\", [44] = "Z", [45] = "X", [46] = "C", [47] = "V", [48] = "B",
 	[49] = "N", [50] = "M", [51] = ",", [52] = ".",
-	[54] = "RShift",
+	[54] = "Right Shift",
 	
 	[57] = "Space", [58] = "Caps Lock", [59] = "F1", [60] = "F2", [61] = "F3", 
 	[62] = "F4", [63] = "F5", [64] = "F6", [65] = "F7", [66] = "F8", 
@@ -66,6 +68,8 @@ local nCodeKeyMap = {
 	[80] = "Num 2", [81] = "Num 3", [82] = "Num 0", [83] = "Num Del",
 	
 	[87] = "F11", [88] = "F12",
+    
+    [285] = "Right Ctrl",
 	
 	[328] = "Up", [331] = "Left", [333] = "Right", [336] = "Down"
 }
@@ -115,7 +119,16 @@ function InputKey:newFromKeyParams(eDevice, eModifier, nCode)
 
     -- initialize variables here
     o.eDevice = eDevice
-    o.eModifier = eModifier
+    if nCode == 29
+       or nCode == 42
+       or nCode == 54
+       or nCode == 285
+    then
+        o.eModifier = 0
+    else
+        o.eModifier = eModifier
+    end
+    
     o.nCode = nCode
     o.strKey = nCodeKeyMap[nCode]
     
@@ -127,18 +140,26 @@ function InputKey:newFromSysKeyCode(sysKeyCode) -- TODO: how to chain constructo
 
     -- initialize variables here
     o.eDevice = 1
-    if Apollo.IsAltKeyDown() then
-        o.eModifier = 1
-    elseif Apollo.IsControlKeyDown() then
-        o.eModifier = 2
-    elseif Apollo.IsAltKeyDown() then
-        o.eModifier = 4
-    else
-        o.eModifier = 0
-    end
-    
     o.strKey = systemKeyMapInv[sysKeyCode] or ""
     o.nCode = nCodeKeyMapInv[o.strKey] or 0
+    
+    if o.nCode == 29
+       or o.nCode == 42
+       or o.nCode == 54
+       or o.nCode == 285
+    then
+        o.eModifier = 0
+    else
+        if Apollo.IsAltKeyDown() then
+            o.eModifier = 1
+        elseif Apollo.IsControlKeyDown() then
+            o.eModifier = 2
+        elseif Apollo.IsAltKeyDown() then
+            o.eModifier = 4
+        else
+            o.eModifier = 0
+        end
+    end
     
     return o
 end
@@ -153,7 +174,7 @@ function InputKey:GetInputKeyName()
 	elseif self.eDevice == 1 then
 		if self.strKey ~= "" then
 			if self.eModifier == 0 then
-				return nCodeKeyMap[self.nCode]
+				return tostring(nCodeKeyMap[self.nCode])
 			else
 				local modifier
 				if self.eModifier == 1 then
@@ -165,17 +186,14 @@ function InputKey:GetInputKeyName()
 				else
 					modifier = "Unknown"
 				end
-                if self.nCode == 0 then
-                    return string.format("%s", modifier)
-                else
-                    return string.format("%s-%s", modifier, self.strKey)
-                end
+                
+                return string.format("%s-%s", modifier, tostring(self.strKey))
 			end
 		else
-			return "Unknown key"
+			return "None"
 		end
-    elseif inputKey.eDevice == 0 then
-        return "Key not bound"
+    elseif self.eDevice == 0 then
+        return "None"
 	else
 		return "Unknown device/key"
 	end
