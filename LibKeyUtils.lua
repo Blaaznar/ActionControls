@@ -220,9 +220,6 @@ end
 
 function KeyUtils:GetInputKeyName(inputKey)
     assert(inputKey, "inputKey not provided.")
-	assert(inputKey.eDevice, "eDevice not provided.")
-    assert(inputKey.eModifier, "eModifier not provided.")
-	assert(inputKey.nCode, "nCode not provided.")
     
 	if inputKey.eDevice == 2 then
 		return "Mouse button " .. tostring(inputKey.nCode + 1)
@@ -319,10 +316,7 @@ end
 
 function KeyUtils:UnbindByInput(bindings, inputKey)
 	assert(bindings, "Bindings not provided.")
-    assert(inputKey, "inputKey not provided.")
-	assert(inputKey.eDevice, "eDevice not provided.")
-    assert(inputKey.eModifier, "eModifier not provided.")
-	assert(inputKey.nCode, "nCode not provided.")
+    assert(inputKey, "InputKey not provided.")
     
 	for _, binding in ipairs(bindings) do
 		for _, arInput in ipairs(binding.arInputs) do
@@ -354,9 +348,7 @@ end
 -- TODO: use GameLib.GetCharInputKeySet!!!!!!!!!!!!!!!!!!!!!!!!
 
 function KeyUtils:GetBinding(bindings, inputKey)
-	assert(inputKey.eDevice, "Binding eDevice not provided.")
-    assert(inputKey.eModifier, "Binding eModifier not provided.")
-	assert(inputKey.nCode, "Binding nCode not provided.")
+	assert(inputKey, "InputKey not provided.")
 
 	if bindings == nil then bindings = GameLib.GetKeyBindings() end
 	

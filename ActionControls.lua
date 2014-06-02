@@ -186,7 +186,8 @@ function ActionControls:OnDocLoaded()
             "MatchingGameReady",
             "PVPMatchFinished",
             "P2PTradeInvite",
-            "ProgressClickWindowDisplay")
+            "ProgressClickWindowDisplay",
+            "ShowActionBarShortcut")
 
 		Apollo.RegisterTimerHandler("DelayedMouseLockToggleTimer", "OnDelayedMouseLockToggleTimer", self)
         Apollo.CreateTimer("DelayedMouseLockToggleTimer", 0.1, false) -- Hack for getting the right window shown state
@@ -203,7 +204,7 @@ function ActionControls:OnDocLoaded()
         Apollo.RegisterEventHandler("TargetUnitChanged", "OnTargetUnitChanged", self)
         Apollo.RegisterEventHandler("MouseOverUnitChanged", "OnMouseOverUnitChanged", self)
         Apollo.RegisterTimerHandler("DelayedMouseOverTargetTimer", "OnDelayedMouseOverTargetTimer", self)
-        Apollo.CreateTimer("DelayedMouseOverTargetTimer", 0.3, false)
+        Apollo.CreateTimer("DelayedMouseOverTargetTimer", 0.2, false)
         Apollo.StopTimer("DelayedMouseOverTargetTimer")
         
         -- Keybinding events
@@ -363,7 +364,7 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
     end
 
     local inputKey = InputKey:newFromSysKeyCode(sysKeyCode)
-
+    
     if inputKey.strKey == "" or inputKey.nCode == 0 then
         self.log:Debug("Unknown key code (%s), please report it to addon author.", sysKeyCode)
         return
@@ -430,19 +431,23 @@ end
 function ActionControls:SetMouseLock(lockState) 
     if lockState ~= GameLib.IsMouseLockOn() then
         self:SetLastTarget()
-        GameLib.SetMouseLock(lockState)
-
+        
         -- EXPERIMENTAL --
         -- Automatic remapping of LMB/RMB to action 1/2 on camera lock - Does not work in combat :(
         if self.settings.automaticMouseBinding then
-            
             try(function()
-                    self:AutoBinding(lockState)
+                    if GameLib.GetPlayerUnit():IsInCombat() then
+                        self.log:Error("In combat, changing bindings is not possible at this moment.")
+                    else                    
+                        self:AutoBinding(lockState)
+                    end
                 end,
                 function(e)
                     self.log:Error(e)
                 end)
         end
+        
+        GameLib.SetMouseLock(lockState)
     end
 end
 
@@ -473,7 +478,8 @@ end
 function ActionControls:AutoBinding(bindState)
     --if self.bindings == nil then 
     -- APOLLO_BUG: Game doesn't correctly notify of bindings changing when only secondary bindings have been changed, so if I cache the bindings I'll end up overwriting changes made to game's keybindings.
-        self.bindings = GameLib.GetKeyBindings()
+    -- BUG2: Binding keys while turning on mouselook and holding down LMB will lock the mouselook and Apollo.SetMouseLock(false) will not work untill Esc key is pressed
+        self.bindings = self:ReadKeyBindings()
 	--end
     
 	if bindState then
@@ -548,8 +554,11 @@ end
 --------------------------------------------------------------------------
 function ActionControls:OnMouseOverUnitChanged(unit)
     self.immediateMouseOverUnit = unit
-    if unit == GameLib.GetTargetUnit() then
-        -- same target
+    
+    if unit == nil
+       or unit == GameLib.GetTargetUnit() -- same target
+       or unit:IsDead() -- dead target
+    then
         return
     end
     

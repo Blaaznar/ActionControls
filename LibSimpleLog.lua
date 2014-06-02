@@ -23,16 +23,6 @@ end
 function SimpleLog:Debug (message, ...) 
 	if self.logLevel > 3 then
 		if arg == nil then
-			Print(string.format("[%s - Debug] : %s", self.logName, tostring(message)))
-		else
-			Print(string.format("[%s - Debug] : %s", self.logName, string.format(message, unpack(arg))))
-		end
-	end
-end
-
-function SimpleLog:Info (message, ...) 
-	if self.logLevel > 2 then
-		if arg == nil then
 			Print(string.format("[%s] : %s", self.logName, tostring(message)))
 		else
 			Print(string.format("[%s] : %s", self.logName, string.format(message, unpack(arg))))
@@ -40,12 +30,22 @@ function SimpleLog:Info (message, ...)
 	end
 end
 
+function SimpleLog:Info (message, ...) 
+	if self.logLevel > 2 then
+		if arg == nil then
+            ChatSystemLib.PostOnChannel(2, string.format("[%s] : %s", self.logName, tostring(message)))
+		else
+			ChatSystemLib.PostOnChannel(2, string.format("[%s] : %s", self.logName, string.format(message, unpack(arg))))
+		end
+	end
+end
+
 function SimpleLog:Warn (message, ...) 
 	if self.logLevel > 1 then
 		if arg == nil then
-			Print(string.format("[%s - Warning] : %s", self.logName, tostring(message)))
+			ChatSystemLib.PostOnChannel(2, string.format("[%s - Warning] : %s", self.logName, tostring(message)))
 		else
-			Print(string.format("[%s - Warning] : %s", self.logName, string.format(message, unpack(arg))))
+			ChatSystemLib.PostOnChannel(2, string.format("[%s - Warning] : %s", self.logName, string.format(message, unpack(arg))))
 		end
 	end
 end
@@ -53,9 +53,9 @@ end
 function SimpleLog:Error (message, ...) 
 	if self.logLevel > 0 then
 		if arg == nil then
-			Print(string.format("[%s - Error] : %s", self.logName, tostring(message)))
+			ChatSystemLib.PostOnChannel(2, string.format("[%s - Error] : %s", self.logName, tostring(message)))
 		else
-			Print(string.format("[%s - Error] : %s", self.logName, string.format(message, unpack(arg))))
+			ChatSystemLib.PostOnChannel(2, string.format("[%s - Error] : %s", self.logName, string.format(message, unpack(arg))))
 		end
 	end
 end
