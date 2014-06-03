@@ -109,6 +109,8 @@ function ActionControls:OnDocLoaded()
     --self.log:Debug("OnDocLoaded()")
     if self.xmlDoc ~= nil and self.xmlDoc:IsLoaded() then
         self.wndMain = Apollo.LoadForm(self.xmlDoc, "ActionControlsForm", nil, self)
+		self.wndCrosshair = Apollo.LoadForm(self.xmlDoc, "CrosshairForm", "InWorldHudStratum", self)
+				
         if self.wndMain == nil then
             Apollo.AddAddonErrorText(self, "Could not load the main window for some reason.")
             return
@@ -119,9 +121,17 @@ function ActionControls:OnDocLoaded()
             Apollo.AddAddonErrorText(self, "Could not load the target lock window for some reason.")
             return
         end
+
+		if self.wndCrosshair == nil then
+            Apollo.AddAddonErrorText(self, "Could not load crosshair window for some reason.")
+            return
+		else
+			self.wndCrosshair:SetOpacity(0.5)
+        end
         
         self.wndMain:Show(false, true)
         self.wndTargetLock:Show(false, true)
+		self.wndCrosshair:Show(false, true)
         
         -- if the xmlDoc is no longer needed, you should set it to nil
         -- self.xmlDoc = nil
@@ -431,17 +441,27 @@ end
 function ActionControls:SetMouseLock(lockState) 
     if lockState ~= GameLib.IsMouseLockOn() then
         self:SetLastTarget()
+
+		if lockState then
+			self:ShowCrosshair()
+		else
+			self:HideCrosshair()
+		end
         
         -- EXPERIMENTAL --
         -- Automatic remapping of LMB/RMB to action 1/2 on camera lock - Does not work in combat :(
         if self.settings.automaticMouseBinding then
             try(function()
-                    if GameLib.GetPlayerUnit():IsInCombat() then
-                        self.log:Error("In combat, changing bindings is not possible at this moment.")
-                    else                    
-                        self:AutoBinding(lockState)
-                    end
-                end,
+					local playerUnit = GameLib.GetPlayerUnit()
+					
+					if playerUnit ~= nil then
+	                    if playerUnit:IsInCombat() then
+	                        self.log:Error("In combat, changing bindings is not possible at this moment.")
+	                    else                    
+	                        self:AutoBinding(lockState)
+	                    end
+					end
+	            end,
                 function(e)
                     self.log:Error(e)
                 end)
@@ -555,6 +575,14 @@ end
 function ActionControls:OnMouseOverUnitChanged(unit)
     self.immediateMouseOverUnit = unit
     
+    if unit ~= nil then
+        local dispositionTo = unit:GetDispositionTo(GameLib.GetPlayerUnit())
+       	--Print(tostring(dispositionTo))
+        
+        -- for frienlies target only players
+        --if dispositionTo == 2 and not unit:IsACharacter() then return end
+    end
+    
     if unit == nil
        or unit == GameLib.GetTargetUnit() -- same target
        or unit:IsDead() -- dead target
@@ -630,7 +658,7 @@ function ActionControls:DisplayLockState(lockState)
 		self.wndTargetLock:SetAnchorOffsets(self.wndTargetForm:GetAnchorOffsets())
     
 		self.wndTargetLock:Show(true, true)
-        --self.log:Info("MouseOver target lock set on <%s>", tostring(GameLib.GetTargetUnit():GetName()))
+		--self.log:Info("MouseOver target lock set on <%s>", tostring(GameLib.GetTargetUnit():GetName()))
     else
 		self.wndTargetLock:Close()
         --self.log:Info("Removed target lock from <%s>", tostring(GameLib.GetTargetUnit():GetName()))
@@ -891,6 +919,28 @@ end
 
 function ActionControls:OnBtnTargetLockedButtonSignal(wndHandler, wndControl, eMouseButton)
 	self:SetTargetLock(false)
+end
+
+---------------------------------------------------------------------------------------------------
+-- CrosshairForm Functions
+---------------------------------------------------------------------------------------------------
+function ActionControls:ShowCrosshair()
+	--local ds = Apollo.GetDisplaySize()
+	--local w = (ds.nWidth - 32) / 2
+	--local h = (ds.nHeight - 32)/ 2
+	
+	-- Carbine broke mouselook, at least show where the targeting reticle is :(
+	local mouse = Apollo.GetMouse()
+	local w = mouse.x - 16
+	local h = mouse.y - 16
+	
+	self.wndCrosshair:SetAnchorOffsets(w, h, w + 32, h + 32)
+	
+	self.wndCrosshair:Show(true, true)
+end
+
+function ActionControls:HideCrosshair()
+	self.wndCrosshair:Close()
 end
 
 -----------------------------------------------------------------------------------------------
