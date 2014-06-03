@@ -385,6 +385,7 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
 	if inputKey == EnumInputKeys.Esc then
 		if self.settings.automaticMouseBinding then
 			self:AutoBinding(false)
+            self:HideCrosshair()
 		end
         return
 	end
