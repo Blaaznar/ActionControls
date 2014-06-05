@@ -8,7 +8,7 @@ require "GameLib"
 -----------------------------------------------------------------------------------------------
 -- Packages
 -----------------------------------------------------------------------------------------------
-local KeyUtils = Apollo.GetPackage("Blaz:Lib:KeyUtils-0.2").tPackage
+local KeyBindingUtils = Apollo.GetPackage("Blaz:Lib:KeyBindingUtils-0.2").tPackage
 local LuaUtils = Apollo.GetPackage("Blaz:Lib:LuaUtils-0.1").tPackage
 local SimpleLog = Apollo.GetPackage("Blaz:Lib:SimpleLog-0.1").tPackage
 local InputKey = Apollo.GetPackage("Blaz:Lib:InputKey-0.1").tPackage
@@ -38,14 +38,14 @@ local ActionControls = {}
 -----------------------------------------------------------------------------------------------
 -- Initialization
 -----------------------------------------------------------------------------------------------
-function ActionControls:new(o, logInst, keyUtilsInst)
+function ActionControls:new(o, logInst, keyBindingUtilsInst)
     o = o or {}
     setmetatable(o, self)
     self.__index = self 
 
     -- variables
     o.log = logInst
-    o.keyUtils = keyUtilsInst
+    o.keyBindingUtils = keyBindingUtilsInst
     
     o.immediateMouseOverUnit = nil
     o.lastTargetUnit = nil
@@ -82,7 +82,7 @@ function ActionControls:Init()
     local bHasConfigureFunction = true
     local strConfigureButtonText = "Action Controls"
     local tDependencies = {
-        "Blaz:Lib:KeyUtils-0.2",
+        "Blaz:Lib:KeyBindingUtils-0.2",
         "Blaz:Lib:LuaUtils-0.1",
         "Blaz:Lib:SimpleLog-0.1"
     }
@@ -312,8 +312,8 @@ function ActionControls:ReadKeyBindings()
     end
     
     -- check if mouse buttons are bound to any action
-    self.isMouseLmbBound = self.keyUtils:IsBound(bindings, EnumInputKeys.LMB)
-    self.isMouseRmbBound = self.keyUtils:IsBound(bindings, EnumInputKeys.RMB)
+    self.isMouseLmbBound = self.keyBindingUtils:IsBound(bindings, EnumInputKeys.LMB)
+    self.isMouseRmbBound = self.keyBindingUtils:IsBound(bindings, EnumInputKeys.RMB)
     self.isMouseBound = self.isMouseLmbBound or self.isMouseRmbBound or self.settings.automaticMouseBinding
 
     self.boundKeys.mouseLockToggleKeys = self:GetBoundKeysForAction(bindings, "ExplicitMouseLook")
@@ -337,7 +337,7 @@ function ActionControls:ReadKeyBindings()
 end
 
 function ActionControls:GetBoundKeysForAction(bindings, ...)
-    local foundBindings = self.keyUtils:GetBindingListByActionNames(bindings, unpack(arg))
+    local foundBindings = self.keyBindingUtils:GetBindingListByActionNames(bindings, unpack(arg))
 	
     if foundBindings == nil or table.getn(foundBindings) == 0 then
         self.log:Debug("GetBoundCharsForAction(...) - no bindings found.")
@@ -514,7 +514,7 @@ function ActionControls:AutoBinding(bindState)
 	    self.isMouseRmbBound = false
 	end
 	
-	self.keyUtils:CommitBindings(self.bindings)
+	self.keyBindingUtils:CommitBindings(self.bindings)
 end
 
 -----------------------------------------------------------------------------------------------
@@ -688,7 +688,7 @@ function ActionControls:GenerateModel()
     
     self.model.settings = table.ShallowCopy(self.settings)
     self.model.explicitMouseLook = {} 
-    self.model.bindingExplicitMouseLook = self.keyUtils:GetBindingByActionName(bindings, "ExplicitMouseLook")
+    self.model.bindingExplicitMouseLook = self.keyBindingUtils:GetBindingByActionName(bindings, "ExplicitMouseLook")
     self.model.explicitMouseLook = InputKey:newFromArInput(self.model.bindingExplicitMouseLook.arInputs[1])
 
 	self.model.isMouseBound = self.isMouseLmbBound or self.isMouseRmbBound or self.settings.automaticMouseBinding
@@ -819,7 +819,7 @@ function ActionControls:IsKeyAlreadyBound(inputKey)
 
     local isBound, binding = try(
         function ()
-            local existingBinding = self.keyUtils:GetBinding(nil, inputKey)
+            local existingBinding = self.keyBindingUtils:GetBinding(nil, inputKey)
             if existingBinding ~= nil then
                 self.log:Info("Key '%s' is already bound to '%s'", tostring(inputKey), tostring(existingBinding.strActionLocalized))
                 return 
@@ -857,11 +857,11 @@ function ActionControls:OnOK()
             end
             
             if self.model.explicitMouseLook.nCode ~= nil 
-                and self.model.explicitMouseLook.nCode ~= KeyUtils:GetBindingByActionName(bindings, "ExplicitMouseLook").arInputs[1].nCode then
-                self.keyUtils:Bind(bindings, "ExplicitMouseLook", 1, self.model.explicitMouseLook, true)
+                and self.model.explicitMouseLook.nCode ~= KeyBindingUtils:GetBindingByActionName(bindings, "ExplicitMouseLook").arInputs[1].nCode then
+                self.keyBindingUtils:Bind(bindings, "ExplicitMouseLook", 1, self.model.explicitMouseLook, true)
             end
             
-            self.keyUtils:CommitBindings(bindings)
+            self.keyBindingUtils:CommitBindings(bindings)
             
             -- use current settings
             self.settings = self.model.settings
@@ -877,22 +877,22 @@ end
 
 -- Binding
 function ActionControls:BindLmbMouseButton(bindings, mouseLmbActionName)
-    self.keyUtils:Bind(bindings, mouseLmbActionName, 2, EnumInputKeys.LMB, true)
+    self.keyBindingUtils:Bind(bindings, mouseLmbActionName, 2, EnumInputKeys.LMB, true)
     self.isMouseLmbBound = true
     
     self.log:Debug("Right mouse button bound to '%s'.", mouseLmbActionName)
 end
 
 function ActionControls:BindRmbMouseButton(bindings, mouseRmbActionName)
-    self.keyUtils:Bind(bindings, mouseRmbActionName, 2, EnumInputKeys.RMB, true)
+    self.keyBindingUtils:Bind(bindings, mouseRmbActionName, 2, EnumInputKeys.RMB, true)
     self.isMouseRmbBound = true
     
     self.log:Debug("Right mouse button bound to '%s'.", mouseRmbActionName)
 end
 
 function ActionControls:UnbindMouseButtons(bindings)
-    self.keyUtils:UnbindByInput(bindings, EnumInputKeys.LMB)
-    self.keyUtils:UnbindByInput(bindings, EnumInputKeys.RMB)
+    self.keyBindingUtils:UnbindByInput(bindings, EnumInputKeys.LMB)
+    self.keyBindingUtils:UnbindByInput(bindings, EnumInputKeys.RMB)
     
     self.isMouseLmbBound = false
     self.isMouseRmbBound = false
@@ -948,9 +948,9 @@ end
 -- ActionControls Instance
 -----------------------------------------------------------------------------------------------
 local logInst = SimpleLog:new()
-local keyUtilsInst = KeyUtils:new(nil, logInst)
+local keyBindingUtilsInst = KeyBindingUtils:new(nil, logInst)
 
-local actionControlsInst = ActionControls:new(nil, logInst, keyUtilsInst)
+local actionControlsInst = ActionControls:new(nil, logInst, keyBindingUtilsInst)
 
 actionControlsInst:Init()
 
