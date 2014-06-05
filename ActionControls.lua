@@ -199,11 +199,7 @@ function ActionControls:OnDocLoaded()
             "ProgressClickWindowDisplay",
             "ShowActionBarShortcut")
 
-		Apollo.RegisterTimerHandler("DelayedMouseLockToggleTimer", "OnDelayedMouseLockToggleTimer", self)
-        Apollo.CreateTimer("DelayedMouseLockToggleTimer", 0.1, false) -- Hack for getting the right window shown state
-        Apollo.StopTimer("DelayedMouseLockToggleTimer")
-
-        -- Lock triggers
+        -- Mouse look triggers
         Apollo.RegisterEventHandler("SystemKeyDown", "OnSystemKeyDown", self) 
         Apollo.RegisterEventHandler("GameClickWorld", "OnGameClickWorld", self)
         Apollo.RegisterEventHandler("GameClickSky", "OnGameClickWorld", self)
@@ -216,6 +212,11 @@ function ActionControls:OnDocLoaded()
         Apollo.RegisterTimerHandler("DelayedMouseOverTargetTimer", "OnDelayedMouseOverTargetTimer", self)
         Apollo.CreateTimer("DelayedMouseOverTargetTimer", 0.2, false)
         Apollo.StopTimer("DelayedMouseOverTargetTimer")
+
+		-- Target lock
+		Apollo.RegisterTimerHandler("DelayedMouseLockToggleTimer", "OnDelayedMouseLockToggleTimer", self)
+        Apollo.CreateTimer("DelayedMouseLockToggleTimer", 0.1, false) -- Hack for getting the right window shown state
+        Apollo.StopTimer("DelayedMouseLockToggleTimer")
         
         -- Keybinding events
         Apollo.RegisterEventHandler("KeyBindingKeyChanged", "OnKeyBindingKeyChanged", self)
@@ -223,7 +224,6 @@ function ActionControls:OnDocLoaded()
         
         -- Additional Addon initialization
         self:ReadKeyBindings()
-
         self:SetTargetLock(false)        
         self:SetMouseLock(false)
     end
@@ -719,17 +719,17 @@ end
 -- ActionControlsForm Functions
 ---------------------------------------------------------------------------------------------------
 
-function ActionControls:OnRbKeyLockingCheck( wndHandler, wndControl, eMouseButton )
+function ActionControls:OnRbKeyLockingCheck(wndHandler, wndControl, eMouseButton)
     self.model.settings.mouseLockingType = EnumMouseLockingType.MovementKeys
     self:GenerateView()
 end
 
-function ActionControls:OnRbKeyLockingUncheck( wndHandler, wndControl, eMouseButton )
+function ActionControls:OnRbKeyLockingUncheck( wndHandler, wndControl, eMouseButton)
     self.model.settings.mouseLockingType = EnumMouseLockingType.None
     self:GenerateView()
 end
 
-function ActionControls:OnBtnBindMouseButtons_ButtonCheck( wndHandler, wndControl, eMouseButton )
+function ActionControls:OnBtnBindMouseButtons_ButtonCheck(wndHandler, wndControl, eMouseButton)
 	self.model.isMouseBound = true
 
     self.model.rmbActionName = "DirectionalDash"
@@ -739,7 +739,7 @@ function ActionControls:OnBtnBindMouseButtons_ButtonCheck( wndHandler, wndContro
     self:GenerateView()
 end
 
-function ActionControls:OnBtnBindMouseButtons_ButtonUncheck( wndHandler, wndControl, eMouseButton )
+function ActionControls:OnBtnBindMouseButtons_ButtonUncheck(wndHandler, wndControl, eMouseButton)
 	self.model.isMouseBound = false
 
     self.model.rmbActionName = ""
@@ -750,13 +750,13 @@ function ActionControls:OnBtnBindMouseButtons_ButtonUncheck( wndHandler, wndCont
 end
 
 -- Automatic binding
-function ActionControls:OnBtnAutoBindMouseButtons_ButtonCheck( wndHandler, wndControl, eMouseButton )
+function ActionControls:OnBtnAutoBindMouseButtons_ButtonCheck(wndHandler, wndControl, eMouseButton)
 	self.model.settings.automaticMouseBinding = true
 	
 	self:GenerateView()
 end
 
-function ActionControls:OnBtnAutoBindMouseButtons_ButtonUncheck( wndHandler, wndControl, eMouseButton )
+function ActionControls:OnBtnAutoBindMouseButtons_ButtonUncheck(wndHandler, wndControl, eMouseButton)
 	self.model.settings.automaticMouseBinding = false
 	
 	self:GenerateView()
@@ -774,7 +774,7 @@ function ActionControls:SetEndBindingState(wndControl)
     self:GenerateView()
 end
 
-function ActionControls:OnBindButtonSignal( wndHandler, wndControl, eMouseButton )
+function ActionControls:OnBindButtonSignal(wndHandler, wndControl, eMouseButton)
     self:SetBeginBindingState(wndControl)
 end
 
@@ -793,7 +793,7 @@ function ActionControls:OnBtnCameraLockKey_WindowKeyDown(wndHandler, wndControl,
     self:SetEndBindingState(wndControl)
 end
 
-function ActionControls:BtnTargetLockKey_WindowKeyDown( wndHandler, wndControl, strKeyName, nScanCode, nMetakeys )
+function ActionControls:BtnTargetLockKey_WindowKeyDown(wndHandler, wndControl, strKeyName, nScanCode, nMetakeys)
     local inputKey = InputKey:newFromKeyParams(1, 0, nScanCode) -- TODO: Modifier support
     if inputKey.eModifier == 0 and nMetakeys ~= 0 then
         return
@@ -936,8 +936,8 @@ function ActionControls:ShowCrosshair()
 	local h = mouse.y - 16
 	
 	self.wndCrosshair:SetAnchorOffsets(w, h, w + 32, h + 32)
-	
-	self.wndCrosshair:Show(true, true)
+
+    self.wndCrosshair:Show(true, true)
 end
 
 function ActionControls:HideCrosshair()
