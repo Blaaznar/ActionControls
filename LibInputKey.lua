@@ -137,7 +137,7 @@ function InputKey:newFromKeyParams(eDevice, eModifier, nCode)
     return o
 end
 
-function InputKey:newFromSysKeyCode(sysKeyCode) -- TODO: how to chain constructors?
+function InputKey:newFromSysKeyCode(sysKeyCode) -- TODO: how to properly chain constructors?
     local o = self:new()
 
     -- initialize variables here
@@ -201,6 +201,17 @@ function InputKey:GetInputKeyName()
 	else
 		return "Unknown device/key"
 	end
+end
+
+function InputKey:IsModifier()
+    return
+       self.eModifier == 0
+       and (self.nCode == GameLib.CodeEnumInputModifierScancode.LeftAlt
+           or self.nCode == GameLib.CodeEnumInputModifierScancode.LeftCtrl
+           or self.nCode == GameLib.CodeEnumInputModifierScancode.LeftShift
+           or self.nCode == GameLib.CodeEnumInputModifierScancode.RightAlt
+           or self.nCode == GameLib.CodeEnumInputModifierScancode.LeftCtrl
+           or self.nCode == GameLib.CodeEnumInputModifierScancode.RightShift)
 end
 
 -- Register Library

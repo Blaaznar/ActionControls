@@ -59,7 +59,7 @@ function ActionControls:new(o, logInst, keyBindingUtilsInst)
 
     o.settings = {
         mouseLockingType = EnumMouseLockingType.MovementKeys,
-        mouseOverTargetLockKey = nil,
+        mouseOverTargetLockKey = EnumInputKeys.None,
         
         mouseLmbActionName = "LimitedActionSet1",
         mouseRmbActionName = "DirectionalDash",
@@ -257,9 +257,13 @@ function ActionControls:RestoreUserSettings(t)
             local settings = table.ShallowCopy(self.settings)
             table.ShallowMerge(t, settings)
             
+            local key = settings.mouseOverTargetLockKey
+            settings.mouseOverTargetLockKey = InputKey:newFromKeyParams(key.eDevice, key.eModifier, key.nCode)
+            
 			-- validation
             assert(GameLib.GetKeyBinding(self.settings.mouseLmbActionName))
 			assert(GameLib.GetKeyBinding(self.settings.mouseRmbActionName))
+            assert(settings.mouseOverTargetLockKey.strKey ~= "")
             
             self.settings = settings
         end,
@@ -391,11 +395,7 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
 	end
 
     -- target locking
-	if not Apollo.IsAltKeyDown() -- TODO: Support for modifiers
-        and not Apollo.IsControlKeyDown() 
-        and not Apollo.IsShiftKeyDown()
-        and inputKey.strKey ~= nil
-        and inputKey.strKey == self.settings.mouseOverTargetLockKey 
+	if inputKey == self.settings.mouseOverTargetLockKey 
     then
         if GameLib.GetTargetUnit() ~= nil then
             self:SetTargetLock(not self:GetTargetLock())
@@ -707,7 +707,7 @@ function ActionControls:GenerateView()
         self.wndMain:FindChild("BtnCameraLockKey"):SetText(tostring(self.model.explicitMouseLook))   
     end
 
-    self.wndMain:FindChild("BtnTargetLockKey"):SetText(tostring(self.model.settings.mouseOverTargetLockKey or "None"))
+    self.wndMain:FindChild("BtnTargetLockKey"):SetText(tostring(self.model.settings.mouseOverTargetLockKey))
     
     self.wndMain:FindChild("BtnBindMouseButtons"):SetCheck(self.model.isMouseBound)
     
@@ -780,13 +780,13 @@ end
 
 function ActionControls:OnBtnCameraLockKey_WindowKeyDown(wndHandler, wndControl, strKeyName, nScanCode, nMetakeys)
     local inputKey = InputKey:newFromKeyParams(1, nMetakeys, nScanCode)
-    if inputKey.eModifier == 0 and nMetakeys ~= 0 then
+    if inputKey:IsModifier() then
         return
     end
     
     if inputKey == EnumInputKeys.Esc then
         self.model.explicitMouseLook = EnumInputKeys.None -- unbind
-    elseif (not self:IsKeyAlreadyBound(inputKey)) then
+    elseif not self:IsKeyAlreadyBound(inputKey) then
         self.model.explicitMouseLook = inputKey
     end        
 
@@ -794,15 +794,15 @@ function ActionControls:OnBtnCameraLockKey_WindowKeyDown(wndHandler, wndControl,
 end
 
 function ActionControls:BtnTargetLockKey_WindowKeyDown(wndHandler, wndControl, strKeyName, nScanCode, nMetakeys)
-    local inputKey = InputKey:newFromKeyParams(1, 0, nScanCode) -- TODO: Modifier support
-    if inputKey.eModifier == 0 and nMetakeys ~= 0 then
+    local inputKey = InputKey:newFromKeyParams(1, nMetakeys, nScanCode)
+    if inputKey:IsModifier() then
         return
     end
     
     if inputKey == EnumInputKeys.Esc then
-        self.model.settings.mouseOverTargetLockKey = nil
+        self.model.settings.mouseOverTargetLockKey = EnumInputKeys.None
     elseif not self:IsKeyAlreadyBound(inputKey) then
-        self.model.settings.mouseOverTargetLockKey = inputKey.strKey -- TODO: Modifier support
+        self.model.settings.mouseOverTargetLockKey = inputKey
     end
     
     self:SetEndBindingState(wndControl)
@@ -811,15 +811,33 @@ end
 function ActionControls:IsKeyAlreadyBound(inputKey)
     if inputKey.strKey == nil then return false end -- ?
     
-    if self.model.settings.mouseOverTargetLockKey == inputKey.strKey 
-        and inputKey.eModifier == 0
+    if self.model.settings.mouseOverTargetLockKey == inputKey
+        or self.model.explicitMouseLook == inputKey
     then
         return true
     end
 
-    local isBound, binding = try(
+    local isBound = try(
         function ()
-            local existingBinding = self.keyBindingUtils:GetBinding(nil, inputKey)
+            local bindings = GameLib.GetKeyBindings()
+            -- TODO: Cleanup this clunky check
+            local sprintBinding = self.keyBindingUtils:GetBindingByActionName(bindings, "SprintModifier")
+            local sprintNCode = sprintBinding.arInputs[1].nCode
+            if (inputKey.eModifier == GameLib.CodeEnumInputModifier.Alt and 
+                (sprintNCode == GameLib.CodeEnumInputModifierScancode.LeftAlt
+                 or sprintNCode == GameLib.CodeEnumInputModifierScancode.RightAlt))
+            or (inputKey.eModifier == GameLib.CodeEnumInputModifier.Control and 
+                (sprintNCode == GameLib.CodeEnumInputModifierScancode.LeftCtrl
+                 or sprintNCode == GameLib.CodeEnumInputModifierScancode.LeftCtrl))
+            or (inputKey.eModifier == GameLib.CodeEnumInputModifier.Shift and 
+                (sprintNCode == GameLib.CodeEnumInputModifierScancode.LeftShift
+                 or sprintNCode == GameLib.CodeEnumInputModifierScancode.RightShift))
+            then
+                self.log:Info("Modifier for '%s' is used for sprinting.", tostring(inputKey))
+                return true
+            end
+            
+            local existingBinding = self.keyBindingUtils:GetBinding(bindings, inputKey)
             if existingBinding ~= nil then
                 self.log:Info("Key '%s' is already bound to '%s'", tostring(inputKey), tostring(existingBinding.strActionLocalized))
                 return 
