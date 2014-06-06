@@ -25,12 +25,25 @@ local EnumMouseLockingType =
     MovementKeys = 1
 }
 
+local EnumInCombatTargetingMode = 
+{
+	None = 0,
+	Hostile = 1,
+	Friendly = 2
+}
+
 local EnumInputKeys =
 {
     None = InputKey:newFromKeyParams(0, 0, 0),
     Esc = InputKey:newFromKeyParams(1, 0, 1),
     LMB = InputKey:newFromKeyParams(2, 0, 0),
     RMB = InputKey:newFromKeyParams(2, 0, 1)
+}
+
+-- extra windows that should prevent turning mouselook on
+local blockingWindowNames =
+{
+	"NeedVsGreedForm"
 }
  
 -----------------------------------------------------------------------------------------------
@@ -66,6 +79,8 @@ function ActionControls:new(o, logInst, keyBindingUtilsInst)
         
         mouseLmbActionName = "LimitedActionSet1",
         mouseRmbActionName = "DirectionalDash",
+
+		inCombatTargetingMode = EnumInCombatTargetingMode.None,
 
 		-- experimental
 		automaticMouseBinding = false
@@ -183,6 +198,7 @@ function ActionControls:OnDocLoaded()
             "ToggleChallengesWindow",
             "ToggleCharacterWindow",
             "ToggleCodex",
+			"ToggleMarketplaceWindow",
             "ToggleGalacticArchiveWindow",
             "ToggleGroupFinder",
             "ToggleInventory",
@@ -489,6 +505,14 @@ function ActionControls:IsBlockingWindowOpen()
 		            return true
 		        end
 			end
+			
+			local windowName = window:GetName()
+			
+			for _,w in ipairs(blockingWindowNames) do
+				if w == windowName and otherWin:IsVisible() then
+					return true
+				end
+			end
 		end
 	end
     
@@ -578,12 +602,8 @@ end
 function ActionControls:OnMouseOverUnitChanged(unit)
     self.immediateMouseOverUnit = unit
     
-    if unit ~= nil then
-        local dispositionTo = unit:GetDispositionTo(GameLib.GetPlayerUnit())
-       	--Print(tostring(dispositionTo))
-        
-        -- for frienlies target only players
-        --if dispositionTo == 2 and not unit:IsACharacter() then return end
+    if not self:IsInCombatTargetingAllowed(unit) then
+		return
     end
     
     if unit == nil
@@ -602,6 +622,33 @@ function ActionControls:OnMouseOverUnitChanged(unit)
             Apollo.StartTimer("DelayedMouseOverTargetTimer")
         end
     end
+end
+
+function ActionControls:IsInCombatTargetingAllowed(unit)
+	if self.settings.inCombatTargetingMode == EnumInCombatTargetingMode.None then
+		return true
+	end
+	
+    if unit ~= nil then
+        local player = GameLib.GetPlayerUnit()
+        local disposition = unit:GetDispositionTo(player)
+        
+        if player:IsInCombat() then
+			if (self.settings.inCombatTargetingMode == EnumInCombatTargetingMode.Hostile
+				and (disposition == Unit.CodeEnumDisposition.Hostile or dispositionTo == Unit.CodeEnumDisposition.Neutral))
+			or (self.settings.inCombatTargetingMode == EnumInCombatTargetingMode.Friendly
+				and disposition == Unit.CodeEnumDisposition.Friendly)
+			then
+				self.log:Debug("InCombat, mouseover target allowed.")
+				return true
+			else
+				self.log:Debug("InCombat, mouseover target NOT allowed.") 
+				return false
+			end	
+       	end
+	end
+	
+	return true
 end
 
 -- Delayed targeting
@@ -715,6 +762,12 @@ function ActionControls:GenerateView()
     
     self.wndMain:FindChild("BtnAutoBindMouseButtons"):Enable(self.model.isMouseBound)
     self.wndMain:FindChild("BtnAutoBindMouseButtons"):SetCheck(self.model.settings.automaticMouseBinding)
+
+	self.wndMain:FindChild("ChkInCombatTargetingMode"):SetCheck(self.model.settings.inCombatTargetingMode ~= EnumInCombatTargetingMode.None)
+	self.wndMain:FindChild("RbInCombatTargetingFriendly"):Enable(self.model.settings.inCombatTargetingMode ~= EnumInCombatTargetingMode.None)
+	self.wndMain:FindChild("RbInCombatTargetingHostile"):Enable(self.model.settings.inCombatTargetingMode ~= EnumInCombatTargetingMode.None)
+	self.wndMain:FindChild("RbInCombatTargetingFriendly"):SetCheck(self.model.settings.inCombatTargetingMode == EnumInCombatTargetingMode.Friendly)
+	self.wndMain:FindChild("RbInCombatTargetingHostile"):SetCheck(self.model.settings.inCombatTargetingMode == EnumInCombatTargetingMode.Hostile)
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -730,6 +783,27 @@ function ActionControls:OnRbKeyLockingUncheck( wndHandler, wndControl, eMouseBut
     self.model.settings.mouseLockingType = EnumMouseLockingType.None
     self:GenerateView()
 end
+
+function ActionControls:ChkInCombatTargetingMode_OnButtonCheck(wndHandler, wndControl, eMouseButton)
+	self.model.settings.inCombatTargetingMode = EnumInCombatTargetingMode.Friendly
+	self:GenerateView()
+end
+
+function ActionControls:ChkInCombatTargetingMode_OnButtonUncheck(wndHandler, wndControl, eMouseButton)
+	self.model.settings.inCombatTargetingMode = EnumInCombatTargetingMode.None
+	self:GenerateView()
+end
+
+function ActionControls:RbInCombatTargetingFriendly_OnButtonCheck(wndHandler, wndControl, eMouseButton)
+	self.model.settings.inCombatTargetingMode = EnumInCombatTargetingMode.Friendly
+	self:GenerateView()
+end
+
+function ActionControls:RbInCombatTargetingHostile_OnButtonCheck(wndHandler, wndControl, eMouseButton)
+	self.model.settings.inCombatTargetingMode = EnumInCombatTargetingMode.Hostile
+	self:GenerateView()
+end
+
 
 function ActionControls:OnBtnBindMouseButtons_ButtonCheck(wndHandler, wndControl, eMouseButton)
 	self.model.isMouseBound = true
@@ -857,29 +931,33 @@ end
 
 -- when the OK button is clicked
 function ActionControls:OnOK()
-    try(function ()        
-            local bindings = GameLib.GetKeyBindings()
-
-            if self.model.isMouseBound ~= self.isMouseBound 
-                or self.model.settings.automaticMouseBinding ~= self.settings.automaticMouseBinding
-            then
-                if self.model.isMouseBound then
-                    self:BindLmbMouseButton(bindings, self.model.settings.mouseLmbActionName)
-                    self:BindRmbMouseButton(bindings, self.model.settings.mouseRmbActionName)
-                end
-                
-                if not self.model.isMouseBound then
-                    self:UnbindMouseButtons(bindings)
-                end
-            end
-            
-            if self.model.explicitMouseLook.nCode ~= nil 
-                and self.model.explicitMouseLook.nCode ~= KeyBindingUtils:GetBindingByActionName(bindings, "ExplicitMouseLook").arInputs[1].nCode then
-                self.keyBindingUtils:Bind(bindings, "ExplicitMouseLook", 1, self.model.explicitMouseLook, true)
-            end
-            
-            self.keyBindingUtils:CommitBindings(bindings)
-            
+    try(function ()
+			if not GameLib.GetPlayerUnit():IsInCombat() then
+	            local bindings = GameLib.GetKeyBindings()
+	
+	            if self.model.isMouseBound ~= self.isMouseBound 
+	                or self.model.settings.automaticMouseBinding ~= self.settings.automaticMouseBinding
+	            then
+	                if self.model.isMouseBound then
+	                    self:BindLmbMouseButton(bindings, self.model.settings.mouseLmbActionName)
+	                    self:BindRmbMouseButton(bindings, self.model.settings.mouseRmbActionName)
+	                end
+	                
+	                if not self.model.isMouseBound then
+	                    self:UnbindMouseButtons(bindings)
+	                end
+	            end
+	            
+	            if self.model.explicitMouseLook.nCode ~= nil 
+	                and self.model.explicitMouseLook.nCode ~= KeyBindingUtils:GetBindingByActionName(bindings, "ExplicitMouseLook").arInputs[1].nCode then
+	                self.keyBindingUtils:Bind(bindings, "ExplicitMouseLook", 1, self.model.explicitMouseLook, true)
+	            end
+	            
+	            self.keyBindingUtils:CommitBindings(bindings)
+			else
+				self.log:Warn("In combat, game bindings not saved.")
+			end        
+	
             -- use current settings
             self.settings = self.model.settings
             
