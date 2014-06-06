@@ -1,6 +1,9 @@
 -----------------------------------------------------------------------------------------------
 -- Client Lua Script for ActionControls
 -- Copyright (c) NCsoft. All rights reserved
+-- 
+-- Notes: I'm agressively getting keybindings as the events for bindings changed don't work
+-- correctly, once Carbine fixes this bindings will be cached locally
 -----------------------------------------------------------------------------------------------
 require "Window"
 require "GameLib"
@@ -106,7 +109,6 @@ end
 -- ActionControls OnDocLoaded
 -----------------------------------------------------------------------------------------------
 function ActionControls:OnDocLoaded()
-    --self.log:Debug("OnDocLoaded()")
     if self.xmlDoc ~= nil and self.xmlDoc:IsLoaded() then
         self.wndMain = Apollo.LoadForm(self.xmlDoc, "ActionControlsForm", nil, self)
 		self.wndCrosshair = Apollo.LoadForm(self.xmlDoc, "CrosshairForm", "InWorldHudStratum", self)
@@ -764,6 +766,7 @@ end
 
 -- Key capture
 function ActionControls:SetBeginBindingState(wndControl)
+    self:ClearBindingStates()
     wndControl:SetCheck(true)
     wndControl:SetFocus()
 end
@@ -772,6 +775,11 @@ function ActionControls:SetEndBindingState(wndControl)
     wndControl:SetCheck(false)
     wndControl:ClearFocus()
     self:GenerateView()
+end
+
+function ActionControls:ClearBindingStates()
+    self.wndMain:FindChild("BtnCameraLockKey"):SetCheck(false)
+    self.wndMain:FindChild("BtnTargetLockKey"):SetCheck(false)
 end
 
 function ActionControls:OnBindButtonSignal(wndHandler, wndControl, eMouseButton)
@@ -820,20 +828,11 @@ function ActionControls:IsKeyAlreadyBound(inputKey)
     local isBound = try(
         function ()
             local bindings = GameLib.GetKeyBindings()
-            -- TODO: Cleanup this clunky check
-            local sprintBinding = self.keyBindingUtils:GetBindingByActionName(bindings, "SprintModifier")
-            local sprintNCode = sprintBinding.arInputs[1].nCode
-            if (inputKey.eModifier == GameLib.CodeEnumInputModifier.Alt and 
-                (sprintNCode == GameLib.CodeEnumInputModifierScancode.LeftAlt
-                 or sprintNCode == GameLib.CodeEnumInputModifierScancode.RightAlt))
-            or (inputKey.eModifier == GameLib.CodeEnumInputModifier.Control and 
-                (sprintNCode == GameLib.CodeEnumInputModifierScancode.LeftCtrl
-                 or sprintNCode == GameLib.CodeEnumInputModifierScancode.LeftCtrl))
-            or (inputKey.eModifier == GameLib.CodeEnumInputModifier.Shift and 
-                (sprintNCode == GameLib.CodeEnumInputModifierScancode.LeftShift
-                 or sprintNCode == GameLib.CodeEnumInputModifierScancode.RightShift))
-            then
-                self.log:Info("Modifier for '%s' is used for sprinting.", tostring(inputKey))
+            
+            local sprintBinding = self.keyBindingUtils:GetBindingByActionName(bindings, "SprintModifier")    
+            local sprintInputKey = inputKey:newFromArInput(sprintBinding.arInputs[1])
+            if sprintInputKey:GetModifierFlag(sprintInputKey.nCode) == inputKey.eModifier then
+                self.log:Info("Key '%s' is already bound to '%s'", tostring(sprintInputKey), tostring(sprintBinding.strActionLocalized))
                 return true
             end
             
@@ -929,6 +928,8 @@ end
 
 function ActionControls:OnClose()
     GameLib.PauseGameActionInput(false)
+    self:ClearBindingStates()
+    
     self.wndMain:Close() -- hide the window
 end
 

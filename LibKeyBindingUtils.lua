@@ -20,6 +20,8 @@ function KeyBindingUtils:Bind(bindings, actionName, index, inputKey, unbindConfl
 	assert(index, "Binding index not provided.")
 	assert(inputKey, "InputKey not provided.")
 	
+    assert(GameLib.IsKeyBindable(inputKey.nCode, inputKey.eModifier), "Key is not bindable.")
+    
 	if unbindConflictingBindings then
 		self:UnbindByInput(bindings, inputKey)
 	else

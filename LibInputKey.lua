@@ -119,13 +119,7 @@ function InputKey:newFromKeyParams(eDevice, eModifier, nCode)
 
     -- initialize variables here
     o.eDevice = eDevice
-    if nCode == GameLib.CodeEnumInputModifierScancode.LeftAlt
-       or nCode == GameLib.CodeEnumInputModifierScancode.LeftCtrl
-       or nCode == GameLib.CodeEnumInputModifierScancode.LeftShift
-       or nCode == GameLib.CodeEnumInputModifierScancode.RightAlt
-       or nCode == GameLib.CodeEnumInputModifierScancode.LeftCtrl
-       or nCode == GameLib.CodeEnumInputModifierScancode.RightShift
-    then
+    if self:IsModifier() then
         o.eModifier = 0
     else
         o.eModifier = eModifier
@@ -145,21 +139,15 @@ function InputKey:newFromSysKeyCode(sysKeyCode) -- TODO: how to properly chain c
     o.strKey = systemKeyMapInv[sysKeyCode] or ""
     o.nCode = nCodeKeyMapInv[o.strKey] or 0
     
-    if o.nCode == GameLib.CodeEnumInputModifierScancode.LeftAlt
-       or o.nCode == GameLib.CodeEnumInputModifierScancode.LeftCtrl
-       or o.nCode == GameLib.CodeEnumInputModifierScancode.LeftShift
-       or o.nCode == GameLib.CodeEnumInputModifierScancode.RightAlt
-       or o.nCode == GameLib.CodeEnumInputModifierScancode.LeftCtrl
-       or o.nCode == GameLib.CodeEnumInputModifierScancode.RightShift
-    then
+    if self:IsModifier() then
         o.eModifier = 0
     else
-        if Apollo.IsAltKeyDown() then
-            o.eModifier = 1
+        if Apollo.IsShiftKeyDown() then
+            o.eModifier = GameLib.CodeEnumInputModifier.Shift
         elseif Apollo.IsControlKeyDown() then
-            o.eModifier = 2
+            o.eModifier = GameLib.CodeEnumInputModifier.Control
         elseif Apollo.IsAltKeyDown() then
-            o.eModifier = 4
+            o.eModifier = GameLib.CodeEnumInputModifier.Alt
         else
             o.eModifier = 0
         end
@@ -204,14 +192,25 @@ function InputKey:GetInputKeyName()
 end
 
 function InputKey:IsModifier()
-    return
-       self.eModifier == 0
-       and (self.nCode == GameLib.CodeEnumInputModifierScancode.LeftAlt
-           or self.nCode == GameLib.CodeEnumInputModifierScancode.LeftCtrl
-           or self.nCode == GameLib.CodeEnumInputModifierScancode.LeftShift
-           or self.nCode == GameLib.CodeEnumInputModifierScancode.RightAlt
-           or self.nCode == GameLib.CodeEnumInputModifierScancode.LeftCtrl
-           or self.nCode == GameLib.CodeEnumInputModifierScancode.RightShift)
+    return self:GetModifierFlag(self.nCode) ~= 0
+end
+
+function InputKey:GetModifierFlag(nModifierScancode)
+	if nModifierScancode == GameLib.CodeEnumInputModifierScancode.LeftShift
+        or nModifierScancode == GameLib.CodeEnumInputModifierScancode.RightShift
+    then
+		return GameLib.CodeEnumInputModifier.Shift
+	elseif nModifierScancode == GameLib.CodeEnumInputModifierScancode.LeftCtrl 
+        or nModifierScancode == GameLib.CodeEnumInputModifierScancode.RightCtrl
+    then
+		return GameLib.CodeEnumInputModifier.Control
+	elseif nModifierScancode == GameLib.CodeEnumInputModifierScancode.LeftAlt 
+        or nModifierScancode == GameLib.CodeEnumInputModifierScancode.RightAlt
+    then
+		return GameLib.CodeEnumInputModifier.Alt
+	else
+		return 0 
+	end
 end
 
 -- Register Library
