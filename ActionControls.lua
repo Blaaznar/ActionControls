@@ -290,6 +290,7 @@ function ActionControls:RestoreUserSettings(t)
             assert(GameLib.GetKeyBinding(self.settings.mouseLmbActionName))
 			assert(GameLib.GetKeyBinding(self.settings.mouseRmbActionName))
             assert(settings.mouseOverTargetLockKey.strKey ~= "")
+            assert(settings.mouseOverTargetLockKey.eDevice)
             
             self.settings = settings
         end,

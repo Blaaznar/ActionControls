@@ -157,9 +157,9 @@ function InputKey:newFromSysKeyCode(sysKeyCode) -- TODO: how to properly chain c
 end
 
 function InputKey:GetInputKeyName()
-	assert(self.eDevice, "Binding eDevice not provided.")
-    assert(self.eModifier, "Binding eModifier not provided.")
-	assert(self.nCode, "Binding nCode not provided.")
+	if  self.eDevice == nil or self.eModifier == nil or self.nCode == nil then
+        return "Invalid key!"
+    end
         
 	if self.eDevice == 2 then
 		return "Mouse button " .. tostring(self.nCode + 1)
