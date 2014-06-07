@@ -7,6 +7,7 @@
 -----------------------------------------------------------------------------------------------
 require "Window"
 require "GameLib"
+require "MatchingGame"
 
 -----------------------------------------------------------------------------------------------
 -- Packages
@@ -43,7 +44,8 @@ local EnumInputKeys =
 -- extra windows that should prevent turning mouselook on
 local blockingWindowNames =
 {
-	"NeedVsGreedForm"
+	"NeedVsGreedForm",
+    "JoinGame"
 }
  
 -----------------------------------------------------------------------------------------------
@@ -497,7 +499,8 @@ function ActionControls:SetMouseLock(lockState)
 end
 
 function ActionControls:IsBlockingWindowOpen()
-    if CSIsLib.IsCSIRunning() then
+    if CSIsLib.IsCSIRunning() or
+        MatchingGame.IsGamePending()then
         return true
     end
 
@@ -515,7 +518,7 @@ function ActionControls:IsBlockingWindowOpen()
 			local windowName = window:GetName()
 			
 			for _,w in ipairs(blockingWindowNames) do
-				if w == windowName and otherWin:IsVisible() then
+				if w == windowName and window:IsVisible() then
 					return true
 				end
 			end
