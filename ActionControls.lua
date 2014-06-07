@@ -264,11 +264,6 @@ end
 -----------------------------------------------------------------------------------------------
 -- Save/Restore user settings
 -----------------------------------------------------------------------------------------------
-function ActionControls:OnSave(eType)
-    if eType ~= GameLib.CodeEnumAddonSaveLevel.Account then return end
-    return self.settings    
-end
-
 function ActionControls:OnRestore(eType, t)
     if eType ~= GameLib.CodeEnumAddonSaveLevel.Account
     or t == nil then
@@ -289,8 +284,7 @@ function ActionControls:RestoreUserSettings(t)
 			-- validation
             assert(GameLib.GetKeyBinding(self.settings.mouseLmbActionName))
 			assert(GameLib.GetKeyBinding(self.settings.mouseRmbActionName))
-            assert(settings.mouseOverTargetLockKey.strKey ~= "")
-            assert(settings.mouseOverTargetLockKey.eDevice)
+            assert(settings.mouseOverTargetLockKey)
             
             self.settings = settings
         end,
@@ -298,6 +292,14 @@ function ActionControls:RestoreUserSettings(t)
             self.log:Error("Error while loading user settings. Default values will be used.")
 			Apollo.AddAddonErrorText(self, tostring(e))
         end)
+end
+
+function ActionControls:OnSave(eType)
+    if eType ~= GameLib.CodeEnumAddonSaveLevel.Account then return end
+    
+    -- cant save objects or it will recursively save a ton of data...
+    self.settings.mouseOverTargetLockKey = self.settings.mouseOverTargetLockKey:ToTable()
+    return self.settings
 end
 
 -----------------------------------------------------------------------------------------------

@@ -213,5 +213,14 @@ function InputKey:GetModifierFlag(nModifierScancode)
 	end
 end
 
+function InputKey:ToTable()
+    local t = {}
+    t.eDevice = self.eDevice
+    t.eModifier = self.eModifier
+    t.nCode = self.nCode
+    
+    return t
+end
+
 -- Register Library
 Apollo.RegisterPackage(InputKey, "Blaz:Lib:InputKey-0.1", 1, {})
