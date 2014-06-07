@@ -117,7 +117,11 @@ function ActionControls:OnLoad()
 end
 
 function ActionControls:GetAsyncLoadStatus()
-    return Apollo.AddonLoadStatus.Loaded
+	if g_ActionBarLoaded then
+		self:InitializeEvents() -- Delay event registering until Carbine UI is done jumping about
+		return Apollo.AddonLoadStatus.Loaded
+	end
+	return Apollo.AddonLoadStatus.Loading
 end
 
 -----------------------------------------------------------------------------------------------
@@ -159,6 +163,14 @@ function ActionControls:OnDocLoaded()
         Apollo.RegisterSlashCommand("ActionControls", "OnActionControlsOn", self)
         Apollo.RegisterSlashCommand("ac-debug", "OnActionControlsOnDebug", self)
         
+        -- Additional Addon initialization
+        self:ReadKeyBindings()
+        self:SetTargetLock(false)        
+        self:SetMouseLock(false)
+    end
+end
+
+function ActionControls:InitializeEvents()
         -- Unlock triggers - general unlocking
         self:RegisterEvents("OnGameDialogInteraction", 
             "Test_MouseReturnSignal",
@@ -239,12 +251,6 @@ function ActionControls:OnDocLoaded()
         -- Keybinding events
         Apollo.RegisterEventHandler("KeyBindingKeyChanged", "OnKeyBindingKeyChanged", self)
         Apollo.RegisterEventHandler("KeyBindingUpdated", "OnKeyBindingUpdated", self)
-        
-        -- Additional Addon initialization
-        self:ReadKeyBindings()
-        self:SetTargetLock(false)        
-        self:SetMouseLock(false)
-    end
 end
 
 function ActionControls:RegisterEvents(strFunction, ...)
