@@ -608,15 +608,15 @@ end
 function ActionControls:OnMouseOverUnitChanged(unit)
     self.immediateMouseOverUnit = unit
     
-    if not self:IsInCombatTargetingAllowed(unit) then
-		return
-    end
-    
     if unit == nil
        or unit == GameLib.GetTargetUnit() -- same target
        or unit:IsDead() -- dead target
     then
         return
+    end
+
+    if not self:IsInCombatTargetingAllowed(unit) then
+		return
     end
     
     if GameLib.IsMouseLockOn() and unit ~= nil and not self:GetTargetLock() then 
@@ -631,27 +631,42 @@ function ActionControls:OnMouseOverUnitChanged(unit)
 end
 
 function ActionControls:IsInCombatTargetingAllowed(unit)
-	if self.settings.inCombatTargetingMode == EnumInCombatTargetingMode.None then
-		return true
-	end
+    local player = GameLib.GetPlayerUnit()
+    if not player:IsInCombat() then
+        return true
+    end
 	
     if unit ~= nil then
-        local player = GameLib.GetPlayerUnit()
-        local disposition = unit:GetDispositionTo(player)
+        -- always allow targeting interactables (or you'll get a nasty surprise in dungeons)
+        local as = unit:GetActivationState()
+        if as ~= nil and as.Spell ~= nil and as.Spell.bCanInteract then 
+            self.log:Debug("Interactable target, mouseover target allowed")
+            return true
+        end
         
-        if player:IsInCombat() then
-			if (self.settings.inCombatTargetingMode == EnumInCombatTargetingMode.Hostile
-				and (disposition == Unit.CodeEnumDisposition.Hostile or dispositionTo == Unit.CodeEnumDisposition.Neutral))
-			or (self.settings.inCombatTargetingMode == EnumInCombatTargetingMode.Friendly
-				and disposition == Unit.CodeEnumDisposition.Friendly)
-			then
-				self.log:Debug("InCombat, mouseover target allowed.")
-				return true
-			else
-				self.log:Debug("InCombat, mouseover target NOT allowed.") 
-				return false
-			end	
-       	end
+        local unitType = unit:GetType()
+        if unitType ~= "Player" and unitType ~= "NonPlayer" then
+            self.log:Debug("In combat - Not a Player or NPC, mouseover target NOT allowed")
+            return false
+        end
+        
+        if self.settings.inCombatTargetingMode == EnumInCombatTargetingMode.None then
+            return true
+        else
+            local disposition = unit:GetDispositionTo(player)
+        
+            if (self.settings.inCombatTargetingMode == EnumInCombatTargetingMode.Hostile
+                and (disposition == Unit.CodeEnumDisposition.Hostile or dispositionTo == Unit.CodeEnumDisposition.Neutral))
+            or (self.settings.inCombatTargetingMode == EnumInCombatTargetingMode.Friendly
+                and disposition == Unit.CodeEnumDisposition.Friendly)
+            then
+                self.log:Debug("In combat - mouseover target allowed.")
+                return true
+            else
+                self.log:Debug("In combat - mouseover target NOT allowed.") 
+                return false
+            end	
+        end
 	end
 	
 	return true
@@ -692,8 +707,8 @@ function ActionControls:SetTargetLock(lockState)
         return
     end
     
-    self:DisplayLockState(lockState)
     self.isTargetLocked = lockState
+    self:DisplayLockState()
     
     self:SetLastTargetLock(lockState)
     
@@ -703,8 +718,8 @@ function ActionControls:SetTargetLock(lockState)
     end
 end
 
-function ActionControls:DisplayLockState(lockState)
-    if lockState then
+function ActionControls:DisplayLockState()
+    if self.isTargetLocked then
         self.wndTargetForm = self.wndTargetForm or Apollo.FindWindowByName("ClusterTargetFlipped")
         if self.wndTargetForm == nil then
             return
