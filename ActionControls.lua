@@ -229,7 +229,11 @@ function ActionControls:InitializeEvents()
             "PVPMatchFinished",
             "P2PTradeInvite",
             "ProgressClickWindowDisplay",
-            "ShowActionBarShortcut")
+            "ShowActionBarShortcut",
+            "CityDirectionsList", 
+            "CityDirectionsClose",
+            "ToggleCREDDExchangeWindow",
+            "ShowTutorial")
 
         -- Mouse look triggers
         Apollo.RegisterEventHandler("SystemKeyDown", "OnSystemKeyDown", self) 
