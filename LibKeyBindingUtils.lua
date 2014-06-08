@@ -37,7 +37,7 @@ function KeyBindingUtils:Bind(bindings, actionName, index, inputKey, unbindConfl
         
         self.log:Debug("Bound '%s' binding at index %s to: '%s'", actionName, tostring(index), tostring(inputKey))
     else
-        self.log:Debug("Binding '%s' not found.", actionName)
+        error(string.format("Binding '%s' not found.", actionName))
     end
 end
 

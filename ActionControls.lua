@@ -28,9 +28,9 @@ local EnumMouseLockingType =
 
 local EnumInCombatTargetingMode = 
 {
-	None = 0,
-	Hostile = 1,
-	Friendly = 2
+    None = 0,
+    Hostile = 1,
+    Friendly = 2
 }
 
 local EnumInputKeys =
@@ -44,7 +44,7 @@ local EnumInputKeys =
 -- extra windows that should prevent turning mouselook on
 local blockingWindowNames =
 {
-	"NeedVsGreedForm",
+    "NeedVsGreedForm",
     "JoinGame"
 }
  
@@ -82,11 +82,13 @@ function ActionControls:new(o, logInst, keyBindingUtilsInst)
         mouseLmbActionName = "LimitedActionSet1",
         mouseRmbActionName = "DirectionalDash",
 
-		inCombatTargetingMode = EnumInCombatTargetingMode.None,
+        inCombatTargetingMode = EnumInCombatTargetingMode.None,
 
-		-- experimental
-		automaticMouseBinding = false
+        -- experimental
+        automaticMouseBinding = false
     }
+    
+    o.defaultSettings = table.ShallowCopy(o.settings)
     
     o.bindings = nil
     
@@ -119,11 +121,11 @@ function ActionControls:OnLoad()
 end
 
 function ActionControls:GetAsyncLoadStatus()
-	if g_ActionBarLoaded then
-		self:InitializeEvents() -- Delay event registering until Carbine UI is done jumping about
-		return Apollo.AddonLoadStatus.Loaded
-	end
-	return Apollo.AddonLoadStatus.Loading
+    if g_ActionBarLoaded then
+        self:InitializeEvents() -- Delay event registering until Carbine UI is done jumping about
+        return Apollo.AddonLoadStatus.Loaded
+    end
+    return Apollo.AddonLoadStatus.Loading
 end
 
 -----------------------------------------------------------------------------------------------
@@ -132,38 +134,40 @@ end
 function ActionControls:OnDocLoaded()
     if self.xmlDoc ~= nil and self.xmlDoc:IsLoaded() then
         self.wndMain = Apollo.LoadForm(self.xmlDoc, "ActionControlsForm", nil, self)
-		self.wndCrosshair = Apollo.LoadForm(self.xmlDoc, "CrosshairForm", "InWorldHudStratum", self)
-				
+        self.wndCrosshair = Apollo.LoadForm(self.xmlDoc, "CrosshairForm", "InWorldHudStratum", self)
+                
         if self.wndMain == nil then
             Apollo.AddAddonErrorText(self, "Could not load the main window for some reason.")
             return
         end
 
-		self.wndTargetLock = Apollo.LoadForm(self.xmlDoc, "TargetLockForm", nil, self)
+        self.wndTargetLock = Apollo.LoadForm(self.xmlDoc, "TargetLockForm", nil, self)
         if self.wndTargetLock == nil then
             Apollo.AddAddonErrorText(self, "Could not load the target lock window for some reason.")
             return
         end
 
-		if self.wndCrosshair == nil then
+        if self.wndCrosshair == nil then
             Apollo.AddAddonErrorText(self, "Could not load crosshair window for some reason.")
             return
-		else
-			self.wndCrosshair:SetOpacity(0.5)
+        else
+            self.wndCrosshair:SetOpacity(0.5)
         end
         
         self.wndMain:Show(false, true)
         self.wndTargetLock:Show(false, true)
-		self.wndCrosshair:Show(false, true)
+        self.wndCrosshair:Show(false, true)
         
         -- if the xmlDoc is no longer needed, you should set it to nil
         -- self.xmlDoc = nil
         
         -- Register handlers for events, slash commands and timer, etc.
-        Apollo.RegisterSlashCommand("ac", "OnActionControlsOn", self)
-        Apollo.RegisterSlashCommand("AC", "OnActionControlsOn", self)
-        Apollo.RegisterSlashCommand("ActionControls", "OnActionControlsOn", self)
-        Apollo.RegisterSlashCommand("ac-debug", "OnActionControlsOnDebug", self)
+        Apollo.RegisterSlashCommand("ac", "OnSlashActionControls", self)
+        Apollo.RegisterSlashCommand("AC", "OnSlashActionControls", self)
+        Apollo.RegisterSlashCommand("ActionControls", "OnSlashActionControls", self)
+        Apollo.RegisterSlashCommand("ac-debug", "OnSlashDebug", self)
+        Apollo.RegisterSlashCommand("ac-rmb", "OnSlashRmbAction", self)
+        Apollo.RegisterSlashCommand("ac-reset", "OnSlashReset", self)
         
         -- Additional Addon initialization
         self:ReadKeyBindings()
@@ -212,7 +216,7 @@ function ActionControls:InitializeEvents()
             "ToggleChallengesWindow",
             "ToggleCharacterWindow",
             "ToggleCodex",
-			"ToggleMarketplaceWindow",
+            "ToggleMarketplaceWindow",
             "ToggleGalacticArchiveWindow",
             "ToggleGroupFinder",
             "ToggleInventory",
@@ -249,14 +253,32 @@ function ActionControls:InitializeEvents()
         Apollo.CreateTimer("DelayedMouseOverTargetTimer", 0.2, false)
         Apollo.StopTimer("DelayedMouseOverTargetTimer")
 
-		-- Target lock
-		Apollo.RegisterTimerHandler("DelayedMouseLockToggleTimer", "OnDelayedMouseLockToggleTimer", self)
+        -- Target lock
+        Apollo.RegisterTimerHandler("DelayedMouseLockToggleTimer", "OnDelayedMouseLockToggleTimer", self)
         Apollo.CreateTimer("DelayedMouseLockToggleTimer", 0.1, false) -- Hack for getting the right window shown state
         Apollo.StopTimer("DelayedMouseLockToggleTimer")
+        
+        -- Breakout monitor timer
+        Apollo.RegisterTimerHandler("MouselookBreakoutTimer", "OnMouselookBreakoutTimer", self)
+        Apollo.CreateTimer("MouselookBreakoutTimer", 0.5, false)
+        Apollo.StopTimer("MouselookBreakoutTimer")
         
         -- Keybinding events
         Apollo.RegisterEventHandler("KeyBindingKeyChanged", "OnKeyBindingKeyChanged", self)
         Apollo.RegisterEventHandler("KeyBindingUpdated", "OnKeyBindingUpdated", self)
+end
+
+-- Monitor stuff that should break mouselock
+function ActionControls:OnMouselookBreakoutTimer()
+    if GameLib.IsMouseLockOn() then
+        if CSIsLib.IsCSIRunning() 
+            or MatchingGame.IsGamePending()
+        then
+            self:SetMouseLock(false)
+        else
+            Apollo.StartTimer("MouselookBreakoutTimer") -- repeating timers can't reliably stop.. so I'm doing a manual loop
+        end
+    end
 end
 
 function ActionControls:RegisterEvents(strFunction, ...)
@@ -285,16 +307,15 @@ function ActionControls:RestoreUserSettings(t)
             local key = settings.mouseOverTargetLockKey
             settings.mouseOverTargetLockKey = InputKey:newFromKeyParams(key.eDevice, key.eModifier, key.nCode)
             
-			-- validation
+            -- validation
             assert(GameLib.GetKeyBinding(self.settings.mouseLmbActionName))
-			assert(GameLib.GetKeyBinding(self.settings.mouseRmbActionName))
+            assert(GameLib.GetKeyBinding(self.settings.mouseRmbActionName))
             assert(settings.mouseOverTargetLockKey)
             
             self.settings = settings
         end,
         function (e)
             self.log:Error("Error while loading user settings. Default values will be used.")
-			Apollo.AddAddonErrorText(self, tostring(e))
         end)
 end
 
@@ -312,17 +333,59 @@ end
 -- Define general functions here
 -- on Configure button from Addons window
 function ActionControls:OnConfigure()
-    self:OnActionControlsOn()
+    self:OnSlashActionControls()
 end
 
 -- on SlashCommand "/ac"
-function ActionControls:OnActionControlsOn()
+function ActionControls:OnSlashActionControls()
     self:OnShowOptionWindow()
 end
 
 -- on SlashCommand "/ac-debug"
-function ActionControls:OnActionControlsOnDebug()
+function ActionControls:OnSlashDebug()
     self.log:SetLogLevel(4)
+end
+
+-- on SlashCommand "/ac-rmb"
+function ActionControls:OnSlashRmbAction(arg1, actionName)
+    try(function ()
+        if not actionName then
+            self.log:Warn("Action name not provided. Try: /ac-rmb LimitedActionSet2")
+            return
+        end
+        
+        local strBinding = GameLib.GetKeyBinding(actionName)
+        if not strBinding or strBinding == "Error !" then
+            self.log:Error("Invalid action name: '%s'. Try: /ac-rmb LimitedActionSet2", tostring(actionName))
+            return
+        end
+
+        local bindings = GameLib.GetKeyBindings()
+        self:BindRmbMouseButton(bindings, actionName)
+        self.keyBindingUtils:CommitBindings(bindings)
+        
+        self.settings.mouseRmbActionName = actionName
+    end,
+    function (e)
+        self.log:Error("Error while setting RMB action: %s", e)
+    end)
+end
+
+function ActionControls:OnSlashReset()
+    try(function ()
+        -- unbind mouse
+        local bindings = GameLib.GetKeyBindings()
+        self:UnbindMouseButtons(bindings)
+        self.keyBindingUtils:CommitBindings(bindings)
+        
+        -- restore original settings
+        self.settings = self.defaultSettings
+        
+        RequestReloadUI()
+    end,
+    function (e)
+        self.log:Error("Error while trying to reset settings: %s", e)
+    end)
 end
 
 -----------------------------------------------------------------------------------------------
@@ -356,46 +419,46 @@ function ActionControls:ReadKeyBindings()
     self.boundKeys.mouseLockToggleKeys = self:GetBoundKeysForAction(bindings, "ExplicitMouseLook")
     
     self.boundKeys.mouseLockTriggerKeys = self:GetBoundKeysForAction(bindings, 
-			"MoveForward", 
-			"DashForward", 
-			"MoveBackward", 
-			"DashBackward", 
-			"DashLeft", 
-			"StrafeLeft", 
-			"TurnLeft", 
-			"DashRight", 
-			"StrafeRight", 
-			"TurnRight", 
-			"Jump", 
-			"ToggleAutoRun",
-			"SprintModifier")
+            "MoveForward", 
+            "DashForward", 
+            "MoveBackward", 
+            "DashBackward", 
+            "DashLeft", 
+            "StrafeLeft", 
+            "TurnLeft", 
+            "DashRight", 
+            "StrafeRight", 
+            "TurnRight", 
+            "Jump", 
+            "ToggleAutoRun",
+            "SprintModifier")
    
     return bindings
 end
 
 function ActionControls:GetBoundKeysForAction(bindings, ...)
     local foundBindings = self.keyBindingUtils:GetBindingListByActionNames(bindings, unpack(arg))
-	
+    
     if foundBindings == nil or table.getn(foundBindings) == 0 then
         self.log:Debug("GetBoundCharsForAction(...) - no bindings found.")
         return nil
     end
     
-    -- self.log:Debug("GetBoundCharsForAction(): " .. LuaUtils:DataDumper(binding))
-	local boundKeys = {}
-	for _, binding in ipairs(foundBindings) do
-		for j, arInput in ipairs(binding.arInputs) do
-			if j > 2 then break end
-			
-			-- can support only keyboard for now
-			if arInput.eDevice == 1 then
+    local boundKeys = {}
+    for _, binding in ipairs(foundBindings) do
+        for j, arInput in ipairs(binding.arInputs) do
+            if j > 2 then break end
+            
+            -- can support only keyboard for now
+            if arInput.eDevice == 1 then
                 local retVal = InputKey:newFromArInput(arInput)
-                
-				table.insert(boundKeys, retVal)
-			end
-		end
-	end
-	    
+
+                --self.log:Info("GetBoundCharsForAction(): " .. LuaUtils:DataDumper(binding))                
+                table.insert(boundKeys, retVal)
+            end
+        end
+    end
+        
     return boundKeys
 end
 
@@ -418,17 +481,17 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
     --else self.log:Info("OnSystemKeyDown(%s): %s", sysKeyCode, tostring(inputKey))
     end
     
-	-- Esc key cleanups
-	if inputKey == EnumInputKeys.Esc then
-		if self.settings.automaticMouseBinding then
-			self:AutoBinding(false)
+    -- Esc key cleanups
+    if inputKey == EnumInputKeys.Esc then
+        if self.settings.automaticMouseBinding then
+            self:AutoBinding(false)
             self:HideCrosshair()
-		end
+        end
         return
-	end
+    end
 
     -- target locking
-	if inputKey == self.settings.mouseOverTargetLockKey 
+    if inputKey == self.settings.mouseOverTargetLockKey 
     then
         if GameLib.GetTargetUnit() ~= nil then
             self:SetTargetLock(not self:GetTargetLock())
@@ -449,14 +512,14 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
     
     -- automatic camera locking
     if self.settings.mouseLockingType == EnumMouseLockingType.MovementKeys 
-		and not GameLib.IsMouseLockOn()
+        and not GameLib.IsMouseLockOn()
     then
         for _,key in ipairs(self.boundKeys.mouseLockTriggerKeys) do
             if inputKey == key then
-				if self:IsBlockingWindowOpen() then
-					return
-				end
-				
+                if self:IsBlockingWindowOpen() then
+                    return
+                end
+                
                 self.log:Debug("OnSystemKeyDown(%s:'%s') - Manual movement lock", sysKeyCode, key.strKey)
                 self:SetMouseLock(true)
                 return
@@ -476,26 +539,27 @@ function ActionControls:SetMouseLock(lockState)
     if lockState ~= GameLib.IsMouseLockOn() then
         self:SetLastTarget()
 
-		if lockState then
-			self:ShowCrosshair()
-		else
-			self:HideCrosshair()
-		end
+        if lockState then
+            Apollo.StartTimer("MouselookBreakoutTimer")
+            self:ShowCrosshair()
+        else
+            self:HideCrosshair()
+        end
         
         -- EXPERIMENTAL --
         -- Automatic remapping of LMB/RMB to action 1/2 on camera lock - Does not work in combat :(
         if self.settings.automaticMouseBinding then
             try(function()
-					local playerUnit = GameLib.GetPlayerUnit()
-					
-					if playerUnit ~= nil then
-	                    if playerUnit:IsInCombat() then
-	                        self.log:Error("In combat, changing bindings is not possible at this moment.")
-	                    else                    
-	                        self:AutoBinding(lockState)
-	                    end
-					end
-	            end,
+                    local playerUnit = GameLib.GetPlayerUnit()
+                    
+                    if playerUnit ~= nil then
+                        if playerUnit:IsInCombat() then
+                            self.log:Error("In combat, changing bindings is not possible at this moment.")
+                        else                    
+                            self:AutoBinding(lockState)
+                        end
+                    end
+                end,
                 function(e)
                     self.log:Error(e)
                 end)
@@ -511,26 +575,26 @@ function ActionControls:IsBlockingWindowOpen()
         return true
     end
 
-	for _,strata in ipairs(Apollo.GetStrata()) do -- thanks to Xeurian for finding this function!
-		for _,window in ipairs(Apollo.GetWindowsInStratum(strata)) do
-			if window:IsStyleOn("Escapable") 
+    for _,strata in ipairs(Apollo.GetStrata()) do -- thanks to Xeurian for finding this function!
+        for _,window in ipairs(Apollo.GetWindowsInStratum(strata)) do
+            if window:IsStyleOn("Escapable") 
             and not window:IsStyleOn("CloseOnExternalClick") 
             then
-				if window:IsShown() or window:IsVisible() then
-		            self.log:Debug("Automatic mouse look blocked by '%s': ", window:GetName())
-		            return true
-		        end
-			end
-			
-			local windowName = window:GetName()
-			
-			for _,w in ipairs(blockingWindowNames) do
-				if w == windowName and window:IsVisible() then
-					return true
-				end
-			end
-		end
-	end
+                if window:IsShown() or window:IsVisible() then
+                    self.log:Debug("Automatic mouse look blocked by '%s': ", window:GetName())
+                    return true
+                end
+            end
+            
+            local windowName = window:GetName()
+            
+            for _,w in ipairs(blockingWindowNames) do
+                if w == windowName and window:IsVisible() then
+                    return true
+                end
+            end
+        end
+    end
     
     return false
 end
@@ -543,27 +607,27 @@ function ActionControls:AutoBinding(bindState)
     -- APOLLO_BUG: Game doesn't correctly notify of bindings changing when only secondary bindings have been changed, so if I cache the bindings I'll end up overwriting changes made to game's keybindings.
     -- BUG2: Binding keys while turning on mouselook and holding down LMB will lock the mouselook and Apollo.SetMouseLock(false) will not work untill Esc key is pressed
         self.bindings = self:ReadKeyBindings()
-	--end
+    --end
     
-	if bindState then
-		self:BindLmbMouseButton(self.bindings, self.settings.mouseLmbActionName)
-	    self:BindRmbMouseButton(self.bindings, self.settings.mouseRmbActionName)
-	    self.isMouseLmbBound = true
-	    self.isMouseRmbBound = true
-	else
-		self:UnbindMouseButtons(self.bindings)
-	    self.isMouseLmbBound = false
-	    self.isMouseRmbBound = false
-	end
-	
-	self.keyBindingUtils:CommitBindings(self.bindings)
+    if bindState then
+        self:BindLmbMouseButton(self.bindings, self.settings.mouseLmbActionName)
+        self:BindRmbMouseButton(self.bindings, self.settings.mouseRmbActionName)
+        self.isMouseLmbBound = true
+        self.isMouseRmbBound = true
+    else
+        self:UnbindMouseButtons(self.bindings)
+        self.isMouseLmbBound = false
+        self.isMouseRmbBound = false
+    end
+    
+    self.keyBindingUtils:CommitBindings(self.bindings)
 end
 
 -----------------------------------------------------------------------------------------------
 -- World Click functions
 -----------------------------------------------------------------------------------------------
 function ActionControls:OnGameClickWorld(param)
-    self.log:Debug("OnGameClickWorld/Unit(%s)", tostring(param))
+    self.log:Debug("OnGameClickWorld/Unit()")
     
     if GameLib.IsMouseLockOn() then
         -- reselect units targeted before the mouse click
@@ -598,18 +662,20 @@ end
 
 function ActionControls:OnGameDialogInteraction()
     self.log:Debug("OnGameDialogInteraction()")
+    
+    if GameLib.GetPlayerTaxiUnit() ~= nil then return end -- on taxi
 
     Apollo.StartTimer("DelayedMouseLockToggleTimer")
 end
 
 function ActionControls:OnDelayedMouseLockToggleTimer()
-	self.log:Debug("OnDelayedMouseLockToggleTimer()")
-	
-	if self:IsBlockingWindowOpen() then
-		self:SetMouseLock(false)
-	elseif self.settings.mouseLockingType ~= EnumMouseLockingType.None then
-		self:SetMouseLock(true)
-	end
+    self.log:Debug("OnDelayedMouseLockToggleTimer()")
+    
+    if self:IsBlockingWindowOpen() then
+        self:SetMouseLock(false)
+    elseif self.settings.mouseLockingType ~= EnumMouseLockingType.None then
+        self:SetMouseLock(true)
+    end
 end
 
 --------------------------------------------------------------------------
@@ -626,7 +692,7 @@ function ActionControls:OnMouseOverUnitChanged(unit)
     end
 
     if not self:IsInCombatTargetingAllowed(unit) then
-		return
+        return
     end
     
     if GameLib.IsMouseLockOn() and unit ~= nil and not self:GetTargetLock() then 
@@ -645,7 +711,7 @@ function ActionControls:IsInCombatTargetingAllowed(unit)
     if not player:IsInCombat() then
         return true
     end
-	
+    
     if unit ~= nil then
         -- always allow targeting interactables (or you'll get a nasty surprise in dungeons)
         local as = unit:GetActivationState()
@@ -675,11 +741,11 @@ function ActionControls:IsInCombatTargetingAllowed(unit)
             else
                 self.log:Debug("In combat - mouseover target NOT allowed.") 
                 return false
-            end	
+            end    
         end
-	end
-	
-	return true
+    end
+    
+    return true
 end
 
 -- Delayed targeting
@@ -735,13 +801,13 @@ function ActionControls:DisplayLockState()
             return
         end
         
-		self.wndTargetLock:SetAnchorPoints(self.wndTargetForm:GetAnchorPoints())
-		self.wndTargetLock:SetAnchorOffsets(self.wndTargetForm:GetAnchorOffsets())
+        self.wndTargetLock:SetAnchorPoints(self.wndTargetForm:GetAnchorPoints())
+        self.wndTargetLock:SetAnchorOffsets(self.wndTargetForm:GetAnchorOffsets())
     
-		self.wndTargetLock:Show(true, true)
-		--self.log:Info("MouseOver target lock set on <%s>", tostring(GameLib.GetTargetUnit():GetName()))
+        self.wndTargetLock:Show(true, true)
+        --self.log:Info("MouseOver target lock set on <%s>", tostring(GameLib.GetTargetUnit():GetName()))
     else
-		self.wndTargetLock:Close()
+        self.wndTargetLock:Close()
         --self.log:Info("Removed target lock from <%s>", tostring(GameLib.GetTargetUnit():GetName()))
     end
 end
@@ -771,13 +837,13 @@ function ActionControls:GenerateModel()
     self.model.bindingExplicitMouseLook = self.keyBindingUtils:GetBindingByActionName(bindings, "ExplicitMouseLook")
     self.model.explicitMouseLook = InputKey:newFromArInput(self.model.bindingExplicitMouseLook.arInputs[1])
 
-	self.model.isMouseBound = self.isMouseLmbBound or self.isMouseRmbBound or self.settings.automaticMouseBinding
+    self.model.isMouseBound = self.isMouseLmbBound or self.isMouseRmbBound or self.settings.automaticMouseBinding
 
     if self.isMouseBound then
         self.model.rmbActionName = "DirectionalDash"
     end
 
-	self.model.settings.automaticMouseBinding = self.settings.automaticMouseBinding
+    self.model.settings.automaticMouseBinding = self.settings.automaticMouseBinding
 end
 
 function ActionControls:GenerateView()
@@ -794,11 +860,11 @@ function ActionControls:GenerateView()
     self.wndMain:FindChild("BtnAutoBindMouseButtons"):Enable(self.model.isMouseBound)
     self.wndMain:FindChild("BtnAutoBindMouseButtons"):SetCheck(self.model.settings.automaticMouseBinding)
 
-	self.wndMain:FindChild("ChkInCombatTargetingMode"):SetCheck(self.model.settings.inCombatTargetingMode ~= EnumInCombatTargetingMode.None)
-	self.wndMain:FindChild("RbInCombatTargetingFriendly"):Enable(self.model.settings.inCombatTargetingMode ~= EnumInCombatTargetingMode.None)
-	self.wndMain:FindChild("RbInCombatTargetingHostile"):Enable(self.model.settings.inCombatTargetingMode ~= EnumInCombatTargetingMode.None)
-	self.wndMain:FindChild("RbInCombatTargetingFriendly"):SetCheck(self.model.settings.inCombatTargetingMode == EnumInCombatTargetingMode.Friendly)
-	self.wndMain:FindChild("RbInCombatTargetingHostile"):SetCheck(self.model.settings.inCombatTargetingMode == EnumInCombatTargetingMode.Hostile)
+    self.wndMain:FindChild("ChkInCombatTargetingMode"):SetCheck(self.model.settings.inCombatTargetingMode ~= EnumInCombatTargetingMode.None)
+    self.wndMain:FindChild("RbInCombatTargetingFriendly"):Enable(self.model.settings.inCombatTargetingMode ~= EnumInCombatTargetingMode.None)
+    self.wndMain:FindChild("RbInCombatTargetingHostile"):Enable(self.model.settings.inCombatTargetingMode ~= EnumInCombatTargetingMode.None)
+    self.wndMain:FindChild("RbInCombatTargetingFriendly"):SetCheck(self.model.settings.inCombatTargetingMode == EnumInCombatTargetingMode.Friendly)
+    self.wndMain:FindChild("RbInCombatTargetingHostile"):SetCheck(self.model.settings.inCombatTargetingMode == EnumInCombatTargetingMode.Hostile)
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -816,57 +882,57 @@ function ActionControls:OnRbKeyLockingUncheck( wndHandler, wndControl, eMouseBut
 end
 
 function ActionControls:ChkInCombatTargetingMode_OnButtonCheck(wndHandler, wndControl, eMouseButton)
-	self.model.settings.inCombatTargetingMode = EnumInCombatTargetingMode.Friendly
-	self:GenerateView()
+    self.model.settings.inCombatTargetingMode = EnumInCombatTargetingMode.Friendly
+    self:GenerateView()
 end
 
 function ActionControls:ChkInCombatTargetingMode_OnButtonUncheck(wndHandler, wndControl, eMouseButton)
-	self.model.settings.inCombatTargetingMode = EnumInCombatTargetingMode.None
-	self:GenerateView()
+    self.model.settings.inCombatTargetingMode = EnumInCombatTargetingMode.None
+    self:GenerateView()
 end
 
 function ActionControls:RbInCombatTargetingFriendly_OnButtonCheck(wndHandler, wndControl, eMouseButton)
-	self.model.settings.inCombatTargetingMode = EnumInCombatTargetingMode.Friendly
-	self:GenerateView()
+    self.model.settings.inCombatTargetingMode = EnumInCombatTargetingMode.Friendly
+    self:GenerateView()
 end
 
 function ActionControls:RbInCombatTargetingHostile_OnButtonCheck(wndHandler, wndControl, eMouseButton)
-	self.model.settings.inCombatTargetingMode = EnumInCombatTargetingMode.Hostile
-	self:GenerateView()
+    self.model.settings.inCombatTargetingMode = EnumInCombatTargetingMode.Hostile
+    self:GenerateView()
 end
 
 
 function ActionControls:OnBtnBindMouseButtons_ButtonCheck(wndHandler, wndControl, eMouseButton)
-	self.model.isMouseBound = true
+    self.model.isMouseBound = true
 
     self.model.rmbActionName = "DirectionalDash"
 
-	self.model.settings.automaticMouseBinding = false
+    self.model.settings.automaticMouseBinding = false
     
     self:GenerateView()
 end
 
 function ActionControls:OnBtnBindMouseButtons_ButtonUncheck(wndHandler, wndControl, eMouseButton)
-	self.model.isMouseBound = false
+    self.model.isMouseBound = false
 
     self.model.rmbActionName = ""
 
-	self.model.settings.automaticMouseBinding = false
-	
+    self.model.settings.automaticMouseBinding = false
+    
     self:GenerateView()
 end
 
 -- Automatic binding
 function ActionControls:OnBtnAutoBindMouseButtons_ButtonCheck(wndHandler, wndControl, eMouseButton)
-	self.model.settings.automaticMouseBinding = true
-	
-	self:GenerateView()
+    self.model.settings.automaticMouseBinding = true
+    
+    self:GenerateView()
 end
 
 function ActionControls:OnBtnAutoBindMouseButtons_ButtonUncheck(wndHandler, wndControl, eMouseButton)
-	self.model.settings.automaticMouseBinding = false
-	
-	self:GenerateView()
+    self.model.settings.automaticMouseBinding = false
+    
+    self:GenerateView()
 end
 
 -- Key capture
@@ -936,7 +1002,8 @@ function ActionControls:IsKeyAlreadyBound(inputKey)
             
             local sprintBinding = self.keyBindingUtils:GetBindingByActionName(bindings, "SprintModifier")    
             local sprintInputKey = inputKey:newFromArInput(sprintBinding.arInputs[1])
-            if sprintInputKey:GetModifierFlag(sprintInputKey.nCode) == inputKey.eModifier then
+            if sprintInputKey.eDevice ~= 0 and
+                sprintInputKey:GetModifierFlag(sprintInputKey.nCode) == inputKey.eModifier then
                 self.log:Info("Key '%s' is already bound to '%s'", tostring(sprintInputKey), tostring(sprintBinding.strActionLocalized))
                 return true
             end
@@ -963,32 +1030,32 @@ end
 -- when the OK button is clicked
 function ActionControls:OnOK()
     try(function ()
-			if not GameLib.GetPlayerUnit():IsInCombat() then
-	            local bindings = GameLib.GetKeyBindings()
-	
-	            if self.model.isMouseBound ~= self.isMouseBound 
-	                or self.model.settings.automaticMouseBinding ~= self.settings.automaticMouseBinding
-	            then
-	                if self.model.isMouseBound then
-	                    self:BindLmbMouseButton(bindings, self.model.settings.mouseLmbActionName)
-	                    self:BindRmbMouseButton(bindings, self.model.settings.mouseRmbActionName)
-	                end
-	                
-	                if not self.model.isMouseBound then
-	                    self:UnbindMouseButtons(bindings)
-	                end
-	            end
-	            
-	            if self.model.explicitMouseLook.nCode ~= nil 
-	                and self.model.explicitMouseLook.nCode ~= KeyBindingUtils:GetBindingByActionName(bindings, "ExplicitMouseLook").arInputs[1].nCode then
-	                self.keyBindingUtils:Bind(bindings, "ExplicitMouseLook", 1, self.model.explicitMouseLook, true)
-	            end
-	            
-	            self.keyBindingUtils:CommitBindings(bindings)
-			else
-				self.log:Warn("In combat, game bindings not saved.")
-			end        
-	
+            if not GameLib.GetPlayerUnit():IsInCombat() then
+                local bindings = GameLib.GetKeyBindings()
+    
+                if self.model.isMouseBound ~= self.isMouseBound 
+                    or self.model.settings.automaticMouseBinding ~= self.settings.automaticMouseBinding
+                then
+                    if self.model.isMouseBound then
+                        self:BindLmbMouseButton(bindings, self.model.settings.mouseLmbActionName)
+                        self:BindRmbMouseButton(bindings, self.model.settings.mouseRmbActionName)
+                    end
+                    
+                    if not self.model.isMouseBound then
+                        self:UnbindMouseButtons(bindings)
+                    end
+                end
+                
+                if self.model.explicitMouseLook.nCode ~= nil 
+                    and self.model.explicitMouseLook.nCode ~= KeyBindingUtils:GetBindingByActionName(bindings, "ExplicitMouseLook").arInputs[1].nCode then
+                    self.keyBindingUtils:Bind(bindings, "ExplicitMouseLook", 1, self.model.explicitMouseLook, true)
+                end
+                
+                self.keyBindingUtils:CommitBindings(bindings)
+            else
+                self.log:Warn("In combat, game bindings not saved.")
+            end        
+    
             -- use current settings
             self.settings = self.model.settings
             
@@ -1047,29 +1114,29 @@ end
 ---------------------------------------------------------------------------------------------------
 
 function ActionControls:OnBtnTargetLockedButtonSignal(wndHandler, wndControl, eMouseButton)
-	self:SetTargetLock(false)
+    self:SetTargetLock(false)
 end
 
 ---------------------------------------------------------------------------------------------------
 -- CrosshairForm Functions
 ---------------------------------------------------------------------------------------------------
 function ActionControls:ShowCrosshair()
-	--local ds = Apollo.GetDisplaySize()
-	--local w = (ds.nWidth - 32) / 2
-	--local h = (ds.nHeight - 32)/ 2
-	
-	-- Carbine broke mouselook, at least show where the targeting reticle is :(
-	local mouse = Apollo.GetMouse()
-	local w = mouse.x - 16
-	local h = mouse.y - 16
-	
-	self.wndCrosshair:SetAnchorOffsets(w, h, w + 32, h + 32)
+    --local ds = Apollo.GetDisplaySize()
+    --local w = (ds.nWidth - 32) / 2
+    --local h = (ds.nHeight - 32)/ 2
+    
+    -- Carbine broke mouselook, at least show where the targeting reticle is :(
+    local mouse = Apollo.GetMouse()
+    local w = mouse.x - 16
+    local h = mouse.y - 16
+    
+    self.wndCrosshair:SetAnchorOffsets(w, h, w + 32, h + 32)
 
     self.wndCrosshair:Show(true, true)
 end
 
 function ActionControls:HideCrosshair()
-	self.wndCrosshair:Close()
+    self.wndCrosshair:Close()
 end
 
 -----------------------------------------------------------------------------------------------
