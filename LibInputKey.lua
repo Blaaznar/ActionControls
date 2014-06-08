@@ -119,7 +119,7 @@ function InputKey:newFromKeyParams(eDevice, eModifier, nCode)
 
     -- initialize variables here
     o.eDevice = eDevice
-    if self:IsModifier() then
+    if o:IsModifier() then
         o.eModifier = 0
     else
         o.eModifier = eModifier
@@ -139,7 +139,7 @@ function InputKey:newFromSysKeyCode(sysKeyCode) -- TODO: how to properly chain c
     o.strKey = systemKeyMapInv[sysKeyCode] or ""
     o.nCode = nCodeKeyMapInv[o.strKey] or 0
     
-    if self:IsModifier() then
+    if o:IsModifier() then
         o.eModifier = 0
     else
         if Apollo.IsShiftKeyDown() then
