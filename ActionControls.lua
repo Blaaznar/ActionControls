@@ -280,7 +280,7 @@ end
 -- Monitor stuff that should break mouselock
 function ActionControls:OnMouselookBreakoutTimer()
     if GameLib.IsMouseLockOn() then
-        if CSIsLib.IsCSIRunning() 
+        if CSIsLib.GetActiveCSI() ~= nil
             or MatchingGame.IsGamePending()
         then
             self:SetMouseLock(false)
@@ -579,8 +579,8 @@ function ActionControls:SetMouseLock(lockState)
 end
 
 function ActionControls:IsBlockingWindowOpen()
-    if CSIsLib.IsCSIRunning() or
-        MatchingGame.IsGamePending()then
+    if CSIsLib.GetActiveCSI() ~= nil 
+        or MatchingGame.IsGamePending() then
         return true
     end
 
