@@ -47,6 +47,15 @@ local blockingWindowNames =
     "NeedVsGreedForm",
     "JoinGame"
 }
+
+local nonBlockingWindowNames =
+{
+    "StoryPanelBubble",
+    "StoryPanelBubbleLow",
+    "StoryPanelBubbleCenter",
+    "StoryPanelUrgent",
+    "StoryPanelInformational"
+}
  
 -----------------------------------------------------------------------------------------------
 -- ActionControls Module Definition
@@ -577,20 +586,30 @@ function ActionControls:IsBlockingWindowOpen()
 
     for _,strata in ipairs(Apollo.GetStrata()) do -- thanks to Xeurian for finding this function!
         for _,window in ipairs(Apollo.GetWindowsInStratum(strata)) do
-            if window:IsStyleOn("Escapable") 
-            and not window:IsStyleOn("CloseOnExternalClick") 
-            then
-                if window:IsShown() or window:IsVisible() then
-                    self.log:Debug("Automatic mouse look blocked by '%s': ", window:GetName())
-                    return true
+            local windowName = window:GetName()
+            local isNonBlocking = false
+            
+            for _,w in ipairs(nonBlockingWindowNames) do
+                if w == windowName then
+                    isNonBlocking = true
+                    break
                 end
             end
-            
-            local windowName = window:GetName()
-            
-            for _,w in ipairs(blockingWindowNames) do
-                if w == windowName and window:IsVisible() then
-                    return true
+        
+            if not isNonBlocking then
+                if window:IsStyleOn("Escapable") 
+                and not window:IsStyleOn("CloseOnExternalClick") 
+                then
+                    if window:IsShown() or window:IsVisible() then
+                        self.log:Debug("Automatic mouse look blocked by '%s': ", window:GetName())
+                        return true
+                    end
+                end
+
+                for _,w in ipairs(blockingWindowNames) do
+                    if w == windowName and window:IsVisible() then
+                        return true
+                    end
                 end
             end
         end
@@ -674,7 +693,8 @@ function ActionControls:OnDelayedMouseLockToggleTimer()
     if self:IsBlockingWindowOpen() then
         self:SetMouseLock(false)
     elseif self.settings.mouseLockingType ~= EnumMouseLockingType.None then
-        self:SetMouseLock(true)
+        --self:SetMouseLock(true)
+        self.log:Debug("OnDelayedMouseLockToggleTimer() disabled untill Carbine fixes mouselook centering")
     end
 end
 
