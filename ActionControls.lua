@@ -299,6 +299,15 @@ end
 -----------------------------------------------------------------------------------------------
 -- Save/Restore user settings
 -----------------------------------------------------------------------------------------------
+function ActionControls:OnSave(eType)
+    if eType ~= GameLib.CodeEnumAddonSaveLevel.Account then return end
+    
+    -- must not save objects or it will recurse over the index metamethod
+    self.settings.mouseOverTargetLockKey = self.settings.mouseOverTargetLockKey:ToTable()
+
+    return self.settings
+end
+
 function ActionControls:OnRestore(eType, t)
     if eType ~= GameLib.CodeEnumAddonSaveLevel.Account
     or t == nil then
@@ -313,13 +322,10 @@ function ActionControls:RestoreUserSettings(t)
             local settings = table.ShallowCopy(self.settings)
             table.ShallowMerge(t, settings)
             
+            self:ValidateUserSettings(settings)
+            
             local key = settings.mouseOverTargetLockKey
             settings.mouseOverTargetLockKey = InputKey:newFromKeyParams(key.eDevice, key.eModifier, key.nCode)
-            
-            -- validation
-            assert(GameLib.GetKeyBinding(self.settings.mouseLmbActionName))
-            assert(GameLib.GetKeyBinding(self.settings.mouseRmbActionName))
-            assert(settings.mouseOverTargetLockKey)
             
             self.settings = settings
         end,
@@ -328,12 +334,18 @@ function ActionControls:RestoreUserSettings(t)
         end)
 end
 
-function ActionControls:OnSave(eType)
-    if eType ~= GameLib.CodeEnumAddonSaveLevel.Account then return end
+function ActionControls:ValidateUserSettings(settings)
+    assert(type(settings.mouseLockingType) == "number")
+    assert(type(settings.inCombatTargetingMode) == "number")
+    assert(type(settings.automaticMouseBinding) == "boolean")
     
-    -- cant save objects or it will recursively save a ton of data...
-    self.settings.mouseOverTargetLockKey = self.settings.mouseOverTargetLockKey:ToTable()
-    return self.settings
+    assert(settings.mouseOverTargetLockKey)
+    assert(settings.mouseOverTargetLockKey.eDevice)
+    assert(settings.mouseOverTargetLockKey.eModifier)
+    assert(settings.mouseOverTargetLockKey.nCode)
+    
+    assert(GameLib.GetKeyBinding(settings.mouseLmbActionName))
+    assert(GameLib.GetKeyBinding(settings.mouseRmbActionName))
 end
 
 -----------------------------------------------------------------------------------------------
