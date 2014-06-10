@@ -841,8 +841,6 @@ function ActionControls:OnShowOptionWindow()
     self:GenerateModel()
     self:GenerateView()
 
-    GameLib.PauseGameActionInput(true)
-    
     self.wndMain:Invoke() -- show the window
 end
 
@@ -1123,7 +1121,6 @@ function ActionControls:OnCancel()
 end
 
 function ActionControls:OnClose()
-    GameLib.PauseGameActionInput(false)
     self:ClearBindingStates()
     
     self.wndMain:Close() -- hide the window
