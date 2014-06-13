@@ -705,8 +705,7 @@ function ActionControls:OnDelayedMouseLockToggleTimer()
     if self:IsBlockingWindowOpen() then
         self:SetMouseLock(false)
     elseif self.settings.mouseLockingType ~= EnumMouseLockingType.None then
-        --self:SetMouseLock(true)
-        self.log:Debug("OnDelayedMouseLockToggleTimer() disabled untill Carbine fixes mouselook centering")
+        self:SetMouseLock(true)
     end
 end
 
@@ -1150,14 +1149,14 @@ end
 -- CrosshairForm Functions
 ---------------------------------------------------------------------------------------------------
 function ActionControls:ShowCrosshair()
-    --local ds = Apollo.GetDisplaySize()
-    --local w = (ds.nWidth - 32) / 2
-    --local h = (ds.nHeight - 32)/ 2
+    local ds = Apollo.GetDisplaySize()
+    local w = (ds.nWidth - 32) / 2
+    local h = (ds.nHeight - 32)/ 2
     
-    -- Carbine broke mouselook, at least show where the targeting reticle is :(
-    local mouse = Apollo.GetMouse()
-    local w = mouse.x - 16
-    local h = mouse.y - 16
+    ---- Carbine broke mouselook, at least show where the targeting reticle is :(
+    --local mouse = Apollo.GetMouse()
+    --local w = mouse.x - 16
+    --local h = mouse.y - 16
     
     self.wndCrosshair:SetAnchorOffsets(w, h, w + 32, h + 32)
 
