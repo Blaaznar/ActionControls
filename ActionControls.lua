@@ -760,6 +760,7 @@ function ActionControls:IsInCombatTargetingAllowed(unit)
         end
         
         if self.settings.inCombatTargetingMode == EnumInCombatTargetingMode.None then
+            self.log:Debug("In combat - no filtering set, mouseover target allowed.")
             return true
         else
             local disposition = unit:GetDispositionTo(player)
