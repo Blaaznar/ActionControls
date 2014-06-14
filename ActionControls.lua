@@ -91,6 +91,7 @@ function ActionControls:new(o, logInst, keyBindingUtilsInst)
         mouseLmbActionName = "LimitedActionSet1",
         mouseRmbActionName = "DirectionalDash",
 
+		crosshair = false,
         inCombatTargetingMode = EnumInCombatTargetingMode.None,
 
         -- experimental
@@ -889,6 +890,7 @@ function ActionControls:GenerateView()
     self.wndMain:FindChild("BtnAutoBindMouseButtons"):Enable(self.model.isMouseBound)
     self.wndMain:FindChild("BtnAutoBindMouseButtons"):SetCheck(self.model.settings.automaticMouseBinding)
 
+	self.wndMain:FindChild("ChkCrosshair"):SetCheck(self.model.settings.crosshair)
     self.wndMain:FindChild("ChkInCombatTargetingMode"):SetCheck(self.model.settings.inCombatTargetingMode ~= EnumInCombatTargetingMode.None)
     self.wndMain:FindChild("RbInCombatTargetingFriendly"):Enable(self.model.settings.inCombatTargetingMode ~= EnumInCombatTargetingMode.None)
     self.wndMain:FindChild("RbInCombatTargetingHostile"):Enable(self.model.settings.inCombatTargetingMode ~= EnumInCombatTargetingMode.None)
@@ -908,6 +910,14 @@ end
 function ActionControls:OnRbKeyLockingUncheck( wndHandler, wndControl, eMouseButton)
     self.model.settings.mouseLockingType = EnumMouseLockingType.None
     self:GenerateView()
+end
+
+function ActionControls:ChkCrosshair_OnButtonCheck(wndHandler, wndControl, eMouseButton)
+	self.model.settings.crosshair = true
+end
+
+function ActionControls:ChkCrosshair_OnButtonUncheck(wndHandler, wndControl, eMouseButton)
+	self.model.settings.crosshair = false
 end
 
 function ActionControls:ChkInCombatTargetingMode_OnButtonCheck(wndHandler, wndControl, eMouseButton)
@@ -1149,6 +1159,10 @@ end
 -- CrosshairForm Functions
 ---------------------------------------------------------------------------------------------------
 function ActionControls:ShowCrosshair()
+	if not self.settings.crosshair then 
+		return 
+	end
+
     local ds = Apollo.GetDisplaySize()
     local w = (ds.nWidth - 32) / 2
     local h = (ds.nHeight - 32)/ 2
