@@ -12,9 +12,13 @@
 -- Character map for keyPress codes reported by SystemKeyDown event
 local systemKeyMap = { 
 	["Backspace"] = 8, ["Tab"] = 9, ["Shift"] = 16, ["Ctrl"] = 17, 
-	["Caps Lock"] = 20, ["Esc"] = 27, ["Space"] = 32, ["Left"] = 37,
+	["Caps Lock"] = 20, ["Esc"] = 27, ["Space"] = 32, ["Page Up"] = 33,
+    ["Page Down"] = 34, ["End"] = 35, ["Home"] = 36,
+    ["Left"] = 37,
 	["Up"] = 38, ["Right"] = 39, ["Down"] = 40,
 
+    ["Insert"] = 45, ["Delete"] = 46,
+    
 	["0"] = 48, ["1"] = 49, ["2"] = 50, ["3"] = 51, ["4"] = 52, ["5"] = 53,
 	["6"] = 54, ["7"] = 55, ["8"] = 56, ["9"] = 57, 
 	
@@ -71,7 +75,9 @@ local nCodeKeyMap = {
     
     [285] = "Right Ctrl",
 	[312] = "Right Alt",
-	[328] = "Up", [331] = "Left", [333] = "Right", [336] = "Down"
+	[327] = "Home", [328] = "Up", [329] = "Page Up", [331] = "Left", [333] = "Right", 
+    [335] = "End", [336] = "Down", [337] = "Page Down", [338] = "Insert", 
+    [339] = "Delete"
 }
 
 -- Inverted tables for faster lookups

@@ -475,7 +475,8 @@ function ActionControls:GetBoundKeysForAction(bindings, ...)
             if arInput.eDevice == 1 then
                 local retVal = InputKey:newFromArInput(arInput)
 
-                --self.log:Info("GetBoundCharsForAction(): " .. LuaUtils:DataDumper(binding))                
+                -- For resolving ncodes, I map the keys to Explicit mouse look and see what this returns
+                --if binding.strAction == "ExplicitMouseLook" then self.log:Info("GetBoundCharsForAction(): " .. LuaUtils:DataDumper(binding)) end
                 table.insert(boundKeys, retVal)
             end
         end
