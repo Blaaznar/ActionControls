@@ -319,7 +319,7 @@ function ActionControls:OnRestore(eType, t)
 end
 
 function ActionControls:RestoreUserSettings(t)
-    try(function ()
+    xpcall(function ()
             local settings = table.ShallowCopy(self.settings)
             table.ShallowMerge(t, settings)
             
@@ -370,7 +370,7 @@ end
 
 -- on SlashCommand "/ac-rmb"
 function ActionControls:OnSlashRmbAction(arg1, actionName)
-    try(function ()
+    xpcall(function ()
         if not actionName then
             self.log:Warn("Action name not provided. Try: /ac-rmb LimitedActionSet2")
             return
@@ -394,7 +394,7 @@ function ActionControls:OnSlashRmbAction(arg1, actionName)
 end
 
 function ActionControls:OnSlashReset()
-    try(function ()
+    xpcall(function ()
         -- unbind mouse
         local bindings = GameLib.GetKeyBindings()
         self:UnbindMouseButtons(bindings)
@@ -571,7 +571,7 @@ function ActionControls:SetMouseLock(lockState)
         -- EXPERIMENTAL --
         -- Automatic remapping of LMB/RMB to action 1/2 on camera lock - Does not work in combat :(
         if self.settings.automaticMouseBinding then
-            try(function()
+            xpcall(function()
                     local playerUnit = GameLib.GetPlayerUnit()
                     
                     if playerUnit ~= nil then
@@ -1035,7 +1035,7 @@ function ActionControls:IsKeyAlreadyBound(inputKey)
         return true
     end
 
-    local isBound = try(
+    local success, isBound = xpcall(
         function ()
             local bindings = GameLib.GetKeyBindings()
             
@@ -1068,7 +1068,7 @@ end
 
 -- when the OK button is clicked
 function ActionControls:OnOK()
-    try(function ()
+    xpcall(function ()
             if not GameLib.GetPlayerUnit():IsInCombat() then
                 local bindings = GameLib.GetKeyBindings()
     
