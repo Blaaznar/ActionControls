@@ -176,6 +176,7 @@ function ActionControls:OnDocLoaded()
         Apollo.RegisterSlashCommand("AC", "OnSlashActionControls", self)
         Apollo.RegisterSlashCommand("ActionControls", "OnSlashActionControls", self)
         Apollo.RegisterSlashCommand("ac-debug", "OnSlashDebug", self)
+        Apollo.RegisterSlashCommand("ac-lmb", "OnSlashLmbAction", self)
         Apollo.RegisterSlashCommand("ac-rmb", "OnSlashRmbAction", self)
         Apollo.RegisterSlashCommand("ac-reset", "OnSlashReset", self)
         
@@ -368,6 +369,38 @@ function ActionControls:OnSlashDebug()
     self.log:SetLogLevel(4)
 end
 
+-- on SlashCommand "/ac-lmb"
+function ActionControls:OnSlashLmbAction(arg1, actionName)
+    xpcall(function ()
+        if not actionName then
+            self.log:Warn("Action name not provided. Try: /ac-lmb LimitedActionSet1")
+            return
+        end
+        
+        local strBinding = GameLib.GetKeyBinding(actionName)
+        if not strBinding or strBinding == "Error !" then
+            self.log:Error("Invalid action name: '%s'. Try: /ac-lmb LimitedActionSet1", tostring(actionName))
+            return
+        end
+
+        local bindings = GameLib.GetKeyBindings()
+        self:BindLmbMouseButton(bindings, actionName)
+        
+        -- switch bindings if same
+        if self.settings.mouseRmbActionName == actionName then
+            self:BindRmbMouseButton(bindings, self.settings.mouseLmbActionName)
+            self.settings.mouseRmbActionName = self.settings.mouseLmbActionName
+        end
+        
+        self.keyBindingUtils:CommitBindings(bindings)
+        
+        self.settings.mouseLmbActionName = actionName
+    end,
+    function (e)
+        self.log:Error("Error while setting RMB action: %s", e)
+    end)
+end
+
 -- on SlashCommand "/ac-rmb"
 function ActionControls:OnSlashRmbAction(arg1, actionName)
     xpcall(function ()
@@ -384,6 +417,13 @@ function ActionControls:OnSlashRmbAction(arg1, actionName)
 
         local bindings = GameLib.GetKeyBindings()
         self:BindRmbMouseButton(bindings, actionName)
+        
+        -- switch bindings if same
+        if self.settings.mouseLmbActionName == actionName then
+            self:BindLmbMouseButton(bindings, self.settings.mouseRmbActionName)
+            self.settings.mouseLmbActionName = self.settings.mouseRmbActionName
+        end
+        
         self.keyBindingUtils:CommitBindings(bindings)
         
         self.settings.mouseRmbActionName = actionName
@@ -742,21 +782,22 @@ end
 function ActionControls:IsInCombatTargetingAllowed(unit)
     local player = GameLib.GetPlayerUnit()
     if not player:IsInCombat() then
+        self.log:Debug("Not in combat - mouseover target allowed")
         return true
     end
     
     if unit ~= nil then
-        -- always allow targeting interactables (or you'll get a nasty surprise in dungeons)
-        local as = unit:GetActivationState()
-        if as ~= nil and as.Spell ~= nil and as.Spell.bCanInteract then 
-            self.log:Debug("Interactable target, mouseover target allowed")
-            return true
-        end
-        
         local unitType = unit:GetType()
         if unitType ~= "Player" and unitType ~= "NonPlayer" then
-            self.log:Debug("In combat - Not a Player or NPC, mouseover target NOT allowed")
-            return false
+            local as = unit:GetActivationState()
+            -- always allow targeting interactables (or you'll get a nasty surprise in dungeons/pvp)
+            if as ~= nil and as.Spell ~= nil and as.Spell.bCanInteract then 
+                self.log:Debug("Interactable target, mouseover target allowed")
+                return true
+            else
+                self.log:Debug("In combat - Not a Player or NPC, mouseover target NOT allowed")
+                return false
+            end
         end
         
         if self.settings.inCombatTargetingMode == EnumInCombatTargetingMode.None then
@@ -779,7 +820,8 @@ function ActionControls:IsInCombatTargetingAllowed(unit)
         end
     end
     
-    return true
+    self.log:Debug("??? - mouseover target NOT allowed")
+    return false
 end
 
 -- Delayed targeting
@@ -923,7 +965,7 @@ function ActionControls:ChkCrosshair_OnButtonUncheck(wndHandler, wndControl, eMo
 end
 
 function ActionControls:ChkInCombatTargetingMode_OnButtonCheck(wndHandler, wndControl, eMouseButton)
-    self.model.settings.inCombatTargetingMode = EnumInCombatTargetingMode.Friendly
+    self.model.settings.inCombatTargetingMode = EnumInCombatTargetingMode.Hostile
     self:GenerateView()
 end
 
