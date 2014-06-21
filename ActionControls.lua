@@ -54,7 +54,9 @@ local nonBlockingWindowNames =
     "StoryPanelBubbleLow",
     "StoryPanelBubbleCenter",
     "StoryPanelUrgent",
-    "StoryPanelInformational"
+    "StoryPanelInformational",
+    "StoryPanelInformational",
+    "TooltipForm"
 }
  
 -----------------------------------------------------------------------------------------------
@@ -767,6 +769,14 @@ function ActionControls:OnMouseOverUnitChanged(unit)
     if not self:IsInCombatTargetingAllowed(unit) then
         return
     end
+
+    if unit:GetType() == "Scanner" then return end -- don't target scientist pets
+    
+    local tPlayerPets = GameLib.GetPlayerPets()
+    for k,v in ipairs(tPlayerPets) do -- don't target own pets
+        if v == unit then return end
+    end
+    
     
     if GameLib.IsMouseLockOn() and unit ~= nil and not self:GetTargetLock() then 
         Apollo.StopTimer("DelayedMouseOverTargetTimer")
