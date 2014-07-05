@@ -184,9 +184,6 @@ function ActionControls:OnDocLoaded()
         
         -- Additional Addon initialization
         self:ReadKeyBindings()
-        
-        self.isMouseBound = self.settings.isMouseLmbBound or self.settings.isMouseRmbBound or self.settings.automaticMouseBinding
-        
         self:SetTargetLock(false)        
         self:SetMouseLock(false)
     end
@@ -683,8 +680,13 @@ function ActionControls:AutoBinding(bindState)
     --end
     
     if bindState then
-        self:BindLmbMouseButton(self.bindings, self.settings.mouseLmbActionName)
-        self:BindRmbMouseButton(self.bindings, self.settings.mouseRmbActionName)
+		if self.settings.isMouseLmbBound then 
+	        self:BindLmbMouseButton(self.bindings, self.settings.mouseLmbActionName)
+		end
+		
+		if self.settings.isMouseRmbBound then
+	        self:BindRmbMouseButton(self.bindings, self.settings.mouseRmbActionName)
+		end
     else
         self:UnbindMouseButtons(self.bindings)
     end
@@ -703,7 +705,7 @@ function ActionControls:OnGameClickWorld(param)
         GameLib.SetTargetUnit(self.lastTargetUnit)
         self:SetTargetLock(self.isLastTargetLocked)
 
-        if not self.isMouseBound then
+        if not self.settings.isMouseLmbBound then
             self:SetMouseLock(false)
         end
     end
@@ -933,11 +935,16 @@ function ActionControls:GenerateView()
 
     self.wndMain:FindChild("BtnTargetLockKey"):SetText(tostring(self.model.settings.mouseOverTargetLockKey))
     
-    self.model.isMouseBound = self.model.settings.isMouseLmbBound or self.model.settings.isMouseRmbBound or self.model.settings.automaticMouseBinding
-    
-    self.wndMain:FindChild("BtnBindMouseButtons"):SetCheck(self.model.isMouseBound)
+    self.model.isMouseBound = self.model.settings.isMouseLmbBound or self.model.settings.isMouseRmbBound
+
+	if not self.model.isMouseBound then
+    	self.model.settings.automaticMouseBinding = false
+	end
+	
+    self.wndMain:FindChild("BtnBindMouseButtons"):SetCheck(self.model.settings.isMouseLmbBound)
+	self.wndMain:FindChild("BtnBindMouseRmb"):SetCheck(self.model.settings.isMouseRmbBound)
+
     self.wndMain:FindChild("BtnAutoBindMouseButtons"):Enable(self.model.isMouseBound)
-    
     self.wndMain:FindChild("BtnAutoBindMouseButtons"):SetCheck(self.model.settings.automaticMouseBinding)
 
 	self.wndMain:FindChild("ChkCrosshair"):SetCheck(self.model.settings.crosshair)
@@ -953,20 +960,26 @@ end
 ---------------------------------------------------------------------------------------------------
 
 function ActionControls:OnBtnBindMouseButtons_ButtonCheck(wndHandler, wndControl, eMouseButton)
-    self.model.settings.isMouseRmbBound = true
     self.model.settings.isMouseLmbBound = true
-
-    self.model.settings.automaticMouseBinding = false
     
     self:GenerateView()
 end
 
 function ActionControls:OnBtnBindMouseButtons_ButtonUncheck(wndHandler, wndControl, eMouseButton)
-    self.model.settings.isMouseRmbBound = false
     self.model.settings.isMouseLmbBound = false
 
-    self.model.settings.automaticMouseBinding = false
-    
+    self:GenerateView()
+end
+
+function ActionControls:OnBtnBindMouseRmb_ButtonCheck( wndHandler, wndControl, eMouseButton )
+    self.model.settings.isMouseRmbBound = true
+
+    self:GenerateView()
+end
+
+function ActionControls:OnBtnBindMouseRmb_ButtonUncheck( wndHandler, wndControl, eMouseButton )
+    self.model.settings.isMouseRmbBound = false
+
     self:GenerateView()
 end
 
@@ -974,9 +987,6 @@ end
 function ActionControls:OnBtnAutoBindMouseButtons_ButtonCheck(wndHandler, wndControl, eMouseButton)
     self.model.settings.automaticMouseBinding = true
 
-    self.model.settings.isMouseRmbBound = true
-    self.model.settings.isMouseLmbBound = true
-    
     self:GenerateView()
 end
 
@@ -1121,18 +1131,17 @@ function ActionControls:OnOK()
     xpcall(function ()
             if not GameLib.GetPlayerUnit():IsInCombat() then
                 local bindings = GameLib.GetKeyBindings()
-    
-                if self.model.isMouseBound ~= self.isMouseBound 
-                    or self.model.settings.automaticMouseBinding ~= self.settings.automaticMouseBinding
+    			
+                if not self.model.settings.automaticMouseBinding
                 then
-                    if self.model.isMouseBound then
+                    if self.model.settings.isMouseLmbBound then
                         self:BindLmbMouseButton(bindings, self.model.settings.mouseLmbActionName)
+					end
+					if self.model.settings.isMouseRmbBound then
                         self:BindRmbMouseButton(bindings, self.model.settings.mouseRmbActionName)
                     end
-                    
-                    if not self.model.isMouseBound then
-                        self:UnbindMouseButtons(bindings)
-                    end
+				else
+					self:UnbindMouseButtons(bindings)
                 end
                 
                 if self.model.explicitMouseLook.nCode ~= nil 
