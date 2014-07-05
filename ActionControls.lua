@@ -342,6 +342,8 @@ function ActionControls:ValidateUserSettings(settings)
     assert(type(settings.mouseLockingType) == "number")
     assert(type(settings.inCombatTargetingMode) == "number")
     assert(type(settings.automaticMouseBinding) == "boolean")
+	assert(type(settings.isMouseLmbBound) == "boolean")
+	assert(type(settings.isMouseRmbBound) == "boolean")
     
     assert(settings.mouseOverTargetLockKey)
     assert(settings.mouseOverTargetLockKey.eDevice)
@@ -921,8 +923,6 @@ function ActionControls:GenerateModel()
     self.model.bindingExplicitMouseLook = self.keyBindingUtils:GetBindingByActionName(bindings, "ExplicitMouseLook")
     self.model.explicitMouseLook = InputKey:newFromArInput(self.model.bindingExplicitMouseLook.arInputs[1])
 
-    self.model.isMouseBound = self.isMouseBound
-
     self.model.settings.automaticMouseBinding = self.settings.automaticMouseBinding
 end
 
@@ -942,8 +942,12 @@ function ActionControls:GenerateView()
 	end
 	
     self.wndMain:FindChild("BtnBindMouseButtons"):SetCheck(self.model.settings.isMouseLmbBound)
-	self.wndMain:FindChild("BtnBindMouseRmb"):SetCheck(self.model.settings.isMouseRmbBound)
+	self.wndMain:FindChild("BtnBindMouseButtons"):SetText(self.model.settings.mouseLmbActionName)
 
+	self.wndMain:FindChild("BtnBindMouseRmb"):SetCheck(self.model.settings.isMouseRmbBound)
+	self.wndMain:FindChild("BtnBindMouseRmb"):SetText(self.model.settings.mouseRmbActionName)
+
+	
     self.wndMain:FindChild("BtnAutoBindMouseButtons"):Enable(self.model.isMouseBound)
     self.wndMain:FindChild("BtnAutoBindMouseButtons"):SetCheck(self.model.settings.automaticMouseBinding)
 
@@ -1156,7 +1160,6 @@ function ActionControls:OnOK()
     
             -- use current settings
             self.settings = self.model.settings
-            self.isMouseBound = self.model.isMouseBound
             
             self:OnClose()
             
