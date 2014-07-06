@@ -1144,7 +1144,9 @@ function ActionControls:OnOK()
 					if self.model.settings.isMouseRmbBound then
                         self:BindRmbMouseButton(bindings, self.model.settings.mouseRmbActionName)
                     end
-				else
+				end
+                
+                if self.model.settings.automaticMouseBinding or not self.model.isMouseBound then
 					self:UnbindMouseButtons(bindings)
                 end
                 
