@@ -79,6 +79,8 @@ function ActionControls:new(o, logInst, keyBindingUtilsInst)
     o.immediateMouseOverUnit = nil
     o.lastTargetUnit = nil
     o.isTargetLocked = false
+    o.mouseoverTargetDelay = 0.2
+    
     o.boundKeys = {}
     o.boundKeys.mouseLockToggleKeys = {}
     o.boundKeys.mouseLockTriggerKeys = {}
@@ -91,7 +93,8 @@ function ActionControls:new(o, logInst, keyBindingUtilsInst)
         mouseLmbActionName = "LimitedActionSet1",
         mouseRmbActionName = "DirectionalDash",
 
-		crosshair = false,
+		isMouseoverTargeting = true,
+        crosshair = true,
         inCombatTargetingMode = EnumInCombatTargetingMode.None,
 
         -- experimental
@@ -263,7 +266,7 @@ function ActionControls:InitializeEvents()
         Apollo.RegisterEventHandler("TargetUnitChanged", "OnTargetUnitChanged", self)
         Apollo.RegisterEventHandler("MouseOverUnitChanged", "OnMouseOverUnitChanged", self)
         Apollo.RegisterTimerHandler("DelayedMouseOverTargetTimer", "OnDelayedMouseOverTargetTimer", self)
-        Apollo.CreateTimer("DelayedMouseOverTargetTimer", 0.2, false)
+        Apollo.CreateTimer("DelayedMouseOverTargetTimer", self.mouseoverTargetDelay, false)
         Apollo.StopTimer("DelayedMouseOverTargetTimer")
 
         -- Target lock
@@ -344,6 +347,8 @@ function ActionControls:ValidateUserSettings(settings)
     assert(type(settings.automaticMouseBinding) == "boolean")
 	assert(type(settings.isMouseLmbBound) == "boolean")
 	assert(type(settings.isMouseRmbBound) == "boolean")
+	assert(type(settings.isMouseoverTargeting) == "boolean")
+	assert(type(settings.crosshair) == "boolean")
     
     assert(settings.mouseOverTargetLockKey)
     assert(settings.mouseOverTargetLockKey.eDevice)
@@ -553,7 +558,8 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
     end
 
     -- target locking
-    if inputKey == self.settings.mouseOverTargetLockKey 
+    if self.settings.isMouseoverTargeting 
+		and inputKey == self.settings.mouseOverTargetLockKey 
     then
         if GameLib.GetTargetUnit() ~= nil then
             self:SetTargetLock(not self:GetTargetLock())
@@ -756,6 +762,8 @@ end
 --------------------------------------------------------------------------
 function ActionControls:OnMouseOverUnitChanged(unit)
     self.immediateMouseOverUnit = unit
+
+	if not self.settings.isMouseoverTargeting then return end
     
     if unit == nil
        or unit == GameLib.GetTargetUnit() -- same target
@@ -778,7 +786,7 @@ function ActionControls:OnMouseOverUnitChanged(unit)
     if GameLib.IsMouseLockOn() and unit ~= nil and not self:GetTargetLock() then 
         Apollo.StopTimer("DelayedMouseOverTargetTimer")
         
-        if GameLib.GetTargetUnit() == nil then
+        if GameLib.GetTargetUnit() == nil or not self:IsInCombatTargetingAllowed(GameLib.GetTargetUnit()) then
             self:SetTarget(unit)
         else
             Apollo.StartTimer("DelayedMouseOverTargetTimer")
@@ -933,8 +941,6 @@ function ActionControls:GenerateView()
         self.wndMain:FindChild("BtnCameraLockKey"):SetText(tostring(self.model.explicitMouseLook))   
     end
 
-    self.wndMain:FindChild("BtnTargetLockKey"):SetText(tostring(self.model.settings.mouseOverTargetLockKey))
-    
     self.model.isMouseBound = self.model.settings.isMouseLmbBound or self.model.settings.isMouseRmbBound
 
 	if not self.model.isMouseBound then
@@ -951,10 +957,19 @@ function ActionControls:GenerateView()
     self.wndMain:FindChild("BtnAutoBindMouseButtons"):Enable(self.model.isMouseBound)
     self.wndMain:FindChild("BtnAutoBindMouseButtons"):SetCheck(self.model.settings.automaticMouseBinding)
 
-	self.wndMain:FindChild("ChkCrosshair"):SetCheck(self.model.settings.crosshair)
+	self.wndMain:FindChild("ChkMouseoverTargeting"):SetCheck(self.model.settings.isMouseoverTargeting)
+
+	self.wndMain:FindChild("ChkCrosshair"):SetCheck(self.model.settings.crosshair)	
+	self.wndMain:FindChild("ChkCrosshair"):Enable(self.model.settings.isMouseoverTargeting)
+		
+	self.wndMain:FindChild("BtnTargetLockKey"):SetText(tostring(self.model.settings.mouseOverTargetLockKey))
+	self.wndMain:FindChild("BtnTargetLockKey"):Enable(self.model.settings.isMouseoverTargeting)
+
     self.wndMain:FindChild("ChkInCombatTargetingMode"):SetCheck(self.model.settings.inCombatTargetingMode ~= EnumInCombatTargetingMode.None)
-    self.wndMain:FindChild("RbInCombatTargetingFriendly"):Enable(self.model.settings.inCombatTargetingMode ~= EnumInCombatTargetingMode.None)
-    self.wndMain:FindChild("RbInCombatTargetingHostile"):Enable(self.model.settings.inCombatTargetingMode ~= EnumInCombatTargetingMode.None)
+	self.wndMain:FindChild("ChkInCombatTargetingMode"):Enable(self.model.settings.isMouseoverTargeting)
+
+    self.wndMain:FindChild("RbInCombatTargetingFriendly"):Enable(self.model.settings.isMouseoverTargeting and self.model.settings.inCombatTargetingMode ~= EnumInCombatTargetingMode.None)
+    self.wndMain:FindChild("RbInCombatTargetingHostile"):Enable(self.model.settings.isMouseoverTargeting and self.model.settings.inCombatTargetingMode ~= EnumInCombatTargetingMode.None)
     self.wndMain:FindChild("RbInCombatTargetingFriendly"):SetCheck(self.model.settings.inCombatTargetingMode == EnumInCombatTargetingMode.Friendly)
     self.wndMain:FindChild("RbInCombatTargetingHostile"):SetCheck(self.model.settings.inCombatTargetingMode == EnumInCombatTargetingMode.Hostile)
 end
@@ -1002,12 +1017,10 @@ end
 
 function ActionControls:OnRbKeyLockingCheck(wndHandler, wndControl, eMouseButton)
     self.model.settings.mouseLockingType = EnumMouseLockingType.MovementKeys
-    self:GenerateView()
 end
 
 function ActionControls:OnRbKeyLockingUncheck( wndHandler, wndControl, eMouseButton)
     self.model.settings.mouseLockingType = EnumMouseLockingType.None
-    self:GenerateView()
 end
 
 function ActionControls:ChkCrosshair_OnButtonCheck(wndHandler, wndControl, eMouseButton)
@@ -1016,6 +1029,18 @@ end
 
 function ActionControls:ChkCrosshair_OnButtonUncheck(wndHandler, wndControl, eMouseButton)
 	self.model.settings.crosshair = false
+end
+
+function ActionControls:ChkMouseoverTargeting_OnButtonCheck(wndHandler, wndControl, eMouseButton)
+	self.model.settings.isMouseoverTargeting = true
+	self.model.settings.crosshair = true
+	self:GenerateView()
+end
+
+function ActionControls:ChkMouseoverTargeting_OnButtonUncheck(wndHandler, wndControl, eMouseButton)
+	self.model.settings.isMouseoverTargeting = false
+	self.model.settings.crosshair = false
+	self:GenerateView()
 end
 
 function ActionControls:ChkInCombatTargetingMode_OnButtonCheck(wndHandler, wndControl, eMouseButton)
