@@ -319,7 +319,6 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
     -- Esc key cleanups
     if inputKey == EnumInputKeys.Esc then
         if self.settings.automaticMouseBinding then
-            self:AutoBinding(false)
             self:HideCrosshair()
         end
         return
