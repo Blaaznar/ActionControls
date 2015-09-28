@@ -33,9 +33,7 @@ local EnumInCombatTargetingMode =
 local EnumInputKeys =
 {
     None = InputKey:newFromKeyParams(0, 0, 0),
-    Esc = InputKey:newFromKeyParams(1, 0, 1),
-    LMB = InputKey:newFromKeyParams(2, 0, 0),
-    RMB = InputKey:newFromKeyParams(2, 0, 1)
+    Esc = InputKey:newFromKeyParams(1, 0, 1)
 }
 
 -----------------------------------------------------------------------------------------------
@@ -66,20 +64,11 @@ function ActionControls:new(o, logInst, keyBindingUtilsInst)
     o.boundKeys.sprintingModifier = {}
 
     o.settings = {
-        mouseLockingType = EnumMouseLockingType.MovementKeys,
         mouseOverTargetLockKey = EnumInputKeys.None,
         
-        mouseLmbActionName = "LimitedActionSet1",
-        mouseRmbActionName = "DirectionalDash",
-
 		isMouseoverTargeting = true,
         crosshair = true,
         inCombatTargetingMode = EnumInCombatTargetingMode.None,
-
-        -- experimental
-        automaticMouseBinding = false,
-        isMouseLmbBound = false,
-        isMouseRmbBound = false
     }
     
     o.defaultSettings = table.ShallowCopy(o.settings)
@@ -316,14 +305,6 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
     --else self.log:Info("OnSystemKeyDown(%s): %s", sysKeyCode, tostring(inputKey))
     end
     
-    -- Esc key cleanups
-    if inputKey == EnumInputKeys.Esc then
-        if self.settings.automaticMouseBinding then
-            self:HideCrosshair()
-        end
-        return
-    end
-
     -- target locking
     if self.settings.isMouseoverTargeting 
 		and inputKey == self.settings.mouseOverTargetLockKey 
