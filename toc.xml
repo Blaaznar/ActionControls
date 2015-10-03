@@ -5,5 +5,4 @@
     <Script Name="LibLuaUtils.lua"/>
     <Script Name="LibSimpleLog.lua"/>
     <Script Name="ActionControls.lua"/>
-    
 </Addon>

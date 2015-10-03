@@ -60,12 +60,12 @@ function ActionControls:new(o, logInst, keyBindingUtilsInst)
     
     o.boundKeys = {}
     o.boundKeys.mouseLockToggleKeys = {}
-    o.boundKeys.mouseLockTriggerKeys = {}
+    o.boundKeys.movementKeys = {}
     o.boundKeys.sprintingModifier = {}
 
     o.settings = {
         mouseOverTargetLockKey = EnumInputKeys.None,
-        
+        closeWindowsOnMovement = true,
 		isMouseoverTargeting = true,
         crosshair = true,
         inCombatTargetingMode = EnumInCombatTargetingMode.None,
@@ -144,6 +144,7 @@ function ActionControls:OnDocLoaded()
         Apollo.RegisterSlashCommand("ac-reset", "OnSlashReset", self)
         
         -- Additional Addon initialization
+        self:ReadKeyBindings()
         self:SetTargetLock(false)        
         
         self:InitializeEvents()
@@ -167,7 +168,10 @@ function ActionControls:InitializeEvents()
         
         Apollo.RegisterTimerHandler("CrosshairTimer", "OnCrosshairTimer", self)
         Apollo.CreateTimer("CrosshairTimer", 1, true)
-        --Apollo.StopTimer("CrosshairTimer")
+        
+        -- Keybinding events
+        Apollo.RegisterEventHandler("KeyBindingKeyChanged", "OnKeyBindingKeyChanged", self)
+        Apollo.RegisterEventHandler("KeyBindingUpdated", "OnKeyBindingUpdated", self)
 end
 
 function ActionControls:RegisterEvents(strFunction, ...)
@@ -218,6 +222,7 @@ function ActionControls:ValidateUserSettings(settings)
     assert(type(settings.inCombatTargetingMode) == "number")
 	assert(type(settings.isMouseoverTargeting) == "boolean")
 	assert(type(settings.crosshair) == "boolean")
+    assert(type(settings.closeWindowsOnMovement) == "boolean")
     
     assert(settings.mouseOverTargetLockKey)
     assert(settings.mouseOverTargetLockKey.eDevice)
@@ -259,6 +264,45 @@ end
 -----------------------------------------------------------------------------------------------
 -- Game keybindings
 -----------------------------------------------------------------------------------------------
+
+function ActionControls:OnKeyBindingKeyChanged(strKeybind)
+    self.log:Debug("OnKeyBindingKeyChanged()")
+    self:ReadKeyBindings()
+end
+
+function ActionControls:OnKeyBindingUpdated()
+    self.log:Debug("OnKeyBindingUpdated()")
+    self:ReadKeyBindings()
+end
+
+function ActionControls:ReadKeyBindings()
+    --GameLib.CodeEnumInputAction.
+    local bindings = GameLib.GetKeyBindings();
+
+    -- if I'm caching bindings locally, refresh them
+    if self.bindings ~= nil then
+        self.bindings = bindings
+    end
+    
+    self.boundKeys.mouseLockToggleKeys = self:GetBoundKeysForAction(bindings, "ExplicitMouseLook")
+    
+    self.boundKeys.movementKeys = self:GetBoundKeysForAction(bindings, 
+            "MoveForward", 
+            "DashForward", 
+            "MoveBackward", 
+            "DashBackward", 
+            "DashLeft", 
+            "StrafeLeft", 
+            "TurnLeft", 
+            "DashRight", 
+            "StrafeRight", 
+            "TurnRight", 
+            "Jump", 
+            "ToggleAutoRun",
+            "SprintModifier")
+   
+    return bindings
+end
 
 function ActionControls:GetBoundKeysForAction(bindings, ...)
     local foundBindings = self.keyBindingUtils:GetBindingListByActionNames(bindings, unpack(arg))
@@ -316,6 +360,20 @@ function ActionControls:OnSystemKeyDown(sysKeyCode)
         end
         return
     end
+    
+    -- automatic interrupt window closing
+    if self.settings.closeWindowsOnMovement --self.settings.mouseLockingType == EnumMouseLockingType.MovementKeys 
+        and not GameLib.IsMouseLockOn()
+    then
+        for _,key in ipairs(self.boundKeys.movementKeys) do
+            if inputKey == key then
+                if self:CloseInterruptWindows() then
+                    return
+                end
+                return
+            end
+        end
+    end
 end
 
 -----------------------------------------------------------------------------------------------
@@ -331,21 +389,22 @@ function ActionControls:OnCrosshairTimer()
     end
 end
 
-function ActionControls:IsBlockingWindowOpen()
-    for _,strata in ipairs(Apollo.GetStrata()) do -- thanks to Xeurian for finding this function!
-        for _,window in ipairs(Apollo.GetWindowsInStratum(strata)) do
-            local windowName = window:GetName()
-            if window:IsStyleOn("InterruptControl") 
-            then
-                if window:IsShown() or window:IsVisible() then
-                    self.log:Debug("Automatic mouse look blocked by '%s': ", window:GetName())
-                    return true
+function ActionControls:CloseInterruptWindows()
+    if Apollo.GetConsoleVariable("player.mouseLookWhileMoving")
+       or (Apollo.GetConsoleVariable("player.mouseLookWhileCombat") and GameLib.GetPlayerUnit():IsInCombat()) then 
+        for _,strata in ipairs(Apollo.GetStrata()) do
+            for _,window in ipairs(Apollo.GetWindowsInStratum(strata)) do
+                local windowName = window:GetName()
+                if window:IsStyleOn("InterruptControl") 
+                then
+                    if window:IsShown() or window:IsVisible() then
+                        self.log:Debug("Closing interrupt window '%s': ", window:GetName())
+                        window:Close()
+                    end
                 end
             end
         end
     end
-    
-    return false
 end
 
 -----------------------------------------------------------------------------------------------
@@ -546,6 +605,8 @@ function ActionControls:GenerateModel()
 end
 
 function ActionControls:GenerateView()
+    self.wndMain:FindChild("ChkCloseWindowsOnMovement"):SetCheck(self.model.settings.closeWindowsOnMovement)	
+
 	self.wndMain:FindChild("ChkMouseoverTargeting"):SetCheck(self.model.settings.isMouseoverTargeting)
 
 	self.wndMain:FindChild("ChkCrosshair"):SetCheck(self.model.settings.crosshair)	
@@ -566,6 +627,14 @@ end
 ---------------------------------------------------------------------------------------------------
 -- ActionControlsForm Functions
 ---------------------------------------------------------------------------------------------------
+
+function ActionControls:ChkCloseWindowsOnMovement_OnButtonUncheck(wndHandler, wndControl, eMouseButton)
+    self.model.settings.closeWindowsOnMovement = false
+end
+
+function ActionControls:ChkCloseWindowsOnMovement_OnButtonCheck(wndHandler, wndControl, eMouseButton)
+    self.model.settings.closeWindowsOnMovement = true
+end
 
 function ActionControls:ChkCrosshair_OnButtonCheck(wndHandler, wndControl, eMouseButton)
 	self.model.settings.crosshair = true
