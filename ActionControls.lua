@@ -98,7 +98,6 @@ end
 -- ActionControls OnLoad
 -----------------------------------------------------------------------------------------------
 function ActionControls:OnLoad()
-    -- load our form file
     self.xmlDoc = XmlDoc.CreateFromFile("ActionControls.xml")
     self.xmlDoc:RegisterCallback("OnDocLoaded", self)
 end
