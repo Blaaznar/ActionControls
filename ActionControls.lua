@@ -298,7 +298,8 @@ function ActionControls:ReadKeyBindings()
             "TurnRight", 
             "Jump", 
             "ToggleAutoRun",
-            "SprintModifier")
+            --"SprintModifier" -- can't link items with closing triggering on this
+            )
    
     return bindings
 end
