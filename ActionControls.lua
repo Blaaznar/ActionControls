@@ -36,6 +36,13 @@ local EnumInputKeys =
     Esc = InputKey:newFromKeyParams(1, 0, 1)
 }
 
+local BlockingWindowNames =
+{
+    "GroupInviteDialog",
+    "GroupMentorDialog",
+    "GroupRequestDialog"
+}
+
 -----------------------------------------------------------------------------------------------
 -- ActionControls Module Definition
 -----------------------------------------------------------------------------------------------
@@ -76,6 +83,8 @@ function ActionControls:new(o, logInst, keyBindingUtilsInst)
     o.bindings = nil
     
     o.model = {}
+    
+    
     
     return o
 end
@@ -395,7 +404,16 @@ function ActionControls:CloseInterruptWindows()
         for _,strata in ipairs(Apollo.GetStrata()) do
             for _,window in ipairs(Apollo.GetWindowsInStratum(strata)) do
                 local windowName = window:GetName()
-                if window:IsStyleOn("InterruptControl") 
+                local isAlwaysBlocking = false
+                
+                for _,w in ipairs(BlockingWindowNames) do
+                if w == windowName then
+                        isAlwaysBlocking = true
+                        break
+                    end
+                end
+                
+                if window:IsStyleOn("InterruptControl")  and not isAlwaysBlocking
                 then
                     if window:IsShown() or window:IsVisible() then
                         self.log:Debug("Closing interrupt window '%s': ", window:GetName())
