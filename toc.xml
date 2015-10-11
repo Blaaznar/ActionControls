@@ -5,4 +5,5 @@
     <Script Name="LibLuaUtils.lua"/>
     <Script Name="LibSimpleLog.lua"/>
     <Script Name="ActionControls.lua"/>
+	<Form Name="ActionControls.xml"/>
 </Addon>

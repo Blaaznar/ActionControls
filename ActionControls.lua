@@ -9,9 +9,9 @@ require "MatchingGame"
 -----------------------------------------------------------------------------------------------
 -- Packages
 -----------------------------------------------------------------------------------------------
-local KeyBindingUtils = Apollo.GetPackage("Blaz:Lib:KeyBindingUtils-0.2").tPackage
-local LuaUtils = Apollo.GetPackage("Blaz:Lib:LuaUtils-0.1").tPackage
-local SimpleLog = Apollo.GetPackage("Blaz:Lib:SimpleLog-0.1").tPackage
+local LuaUtils = Apollo.GetPackage("Blaz:Lib:LuaUtils-0.2").tPackage:new()
+local SimpleLog = Apollo.GetPackage("Blaz:Lib:SimpleLog-0.1").tPackage:new()
+local KeyBindingUtils = Apollo.GetPackage("Blaz:Lib:KeyBindingUtils-0.2").tPackage:new(nil, SimpleLog)
 local InputKey = Apollo.GetPackage("Blaz:Lib:InputKey-0.1").tPackage
 
 -----------------------------------------------------------------------------------------------
@@ -44,14 +44,13 @@ local ActionControls = {}
 -----------------------------------------------------------------------------------------------
 -- Initialization
 -----------------------------------------------------------------------------------------------
-function ActionControls:new(o, logInst, keyBindingUtilsInst)
+function ActionControls:new(o, logInst)
     o = o or {}
     setmetatable(o, self)
     self.__index = self 
 
     -- variables
-    o.log = logInst
-    o.keyBindingUtils = keyBindingUtilsInst
+    o.log = SimpleLog
     
     o.immediateMouseOverUnit = nil
     o.lastTargetUnit = nil
@@ -71,13 +70,11 @@ function ActionControls:new(o, logInst, keyBindingUtilsInst)
         inCombatTargetingMode = EnumInCombatTargetingMode.None,
     }
     
-    o.defaultSettings = table.ShallowCopy(o.settings)
+    o.defaultSettings = LuaUtils:ShallowCopy(o.settings)
     
     o.bindings = nil
     
     o.model = {}
-    
-    
     
     return o
 end
@@ -90,7 +87,7 @@ function ActionControls:Init()
     local strConfigureButtonText = "Action Controls"
     local tDependencies = {
         "Blaz:Lib:KeyBindingUtils-0.2",
-        "Blaz:Lib:LuaUtils-0.1",
+        "Blaz:Lib:LuaUtils-0.2",
         "Blaz:Lib:SimpleLog-0.1"
     }
     Apollo.RegisterAddon(self, bHasConfigureFunction, strConfigureButtonText, tDependencies)
@@ -204,8 +201,8 @@ end
 
 function ActionControls:RestoreUserSettings(t)
     xpcall(function ()
-            local settings = table.ShallowCopy(self.settings)
-            table.ShallowMerge(t, settings)
+            local settings = LuaUtils:ShallowCopy(self.settings)
+            LuaUtils:ShallowMerge(t, settings)
             
             self:ValidateUserSettings(settings)
             
@@ -307,7 +304,7 @@ function ActionControls:ReadKeyBindings()
 end
 
 function ActionControls:GetBoundKeysForAction(bindings, ...)
-    local foundBindings = self.keyBindingUtils:GetBindingListByActionNames(bindings, unpack(arg))
+    local foundBindings = KeyBindingUtils:GetBindingListByActionNames(bindings, unpack(arg))
     
     if foundBindings == nil or table.getn(foundBindings) == 0 then
         self.log:Debug("GetBoundCharsForAction(...) - no bindings found.")
@@ -603,7 +600,7 @@ end
 function ActionControls:GenerateModel()
     self.model = {}
     
-    self.model.settings = table.ShallowCopy(self.settings)
+    self.model.settings = LuaUtils:ShallowCopy(self.settings)
     self.model.explicitMouseLook = {} 
 end
 
@@ -743,7 +740,7 @@ function ActionControls:IsKeyAlreadyBound(inputKey)
         function ()
             local bindings = GameLib.GetKeyBindings()
             
-            local sprintBinding = self.keyBindingUtils:GetBindingByActionName(bindings, "SprintModifier")    
+            local sprintBinding = KeyBindingUtils:GetBindingByActionName(bindings, "SprintModifier")    
             local sprintInputKey = inputKey:newFromArInput(sprintBinding.arInputs[1])
             if sprintInputKey.eDevice ~= 0 and
                 sprintInputKey:GetModifierFlag(sprintInputKey.nCode) == inputKey.eModifier then
@@ -751,7 +748,7 @@ function ActionControls:IsKeyAlreadyBound(inputKey)
                 return true
             end
             
-            local existingBinding = self.keyBindingUtils:GetBinding(bindings, inputKey)
+            local existingBinding = KeyBindingUtils:GetBinding(bindings, inputKey)
             if existingBinding ~= nil then
                 self.log:Info("Key '%s' is already bound to '%s'", tostring(inputKey), tostring(existingBinding.strActionLocalized))
                 return 
@@ -826,10 +823,5 @@ end
 -----------------------------------------------------------------------------------------------
 -- ActionControls Instance
 -----------------------------------------------------------------------------------------------
-local logInst = SimpleLog:new()
-local keyBindingUtilsInst = KeyBindingUtils:new(nil, logInst)
-
-local actionControlsInst = ActionControls:new(nil, logInst, keyBindingUtilsInst)
-
+local actionControlsInst = ActionControls:new(nil, SimpleLog)
 actionControlsInst:Init()
-
