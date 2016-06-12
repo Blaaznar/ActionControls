@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Addon Author="Blaaznar" APIVersion="11" Name="ActionControls" Description="Action control system for Wildstar" Version="@project-version@">
+<Addon Author="Blaaznar" APIVersion="12" Name="ActionControls" Description="Action control system for Wildstar" Version="@project-version@">
     <Script Name="LibInputKey.lua"/>
     <Script Name="LibKeyBindingUtils.lua"/>
     <Script Name="LibLuaUtils.lua"/>
